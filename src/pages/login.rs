@@ -1,38 +1,83 @@
 use dioxus::prelude::*;
+use jsonwebtoken::DecodingKey;
+use shared::api::user::{AuthResponse, Claims, LoginRequest};
+
+use crate::components::navbar::USER;
 
 pub fn Login() -> Element {
+    let mut email = use_signal(|| "".to_string());
+    let mut password = use_signal(|| "".to_string());
+
     rsx! {
         div {
-            class: "max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700",
-            h5 {
-                class: "mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white",
-                "Login"
-            }
-            form {
-                div {
-                    label {
-                        r#for: "email",
-                        class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white",
-                        "Email"
-                    }
-                    input {
-                        r#type: "text",
-                        id: "email",
-                        class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-                        required: 1
-                    }
+            class: "flex w-screen",
+            div {
+                class: "min-w-sm p-6 border border-gray-200 rounded-lg shadow-sm bg-gray-800 border-gray-700 flex-col mx-auto mt-2",
+                h5 {
+                    class: "mb-2 text-2xl font-bold tracking-tight text-gray-900 text-white",
+                    "Login"
                 }
-                div {
-                    label {
-                        r#for: "password",
-                        class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white",
-                        "Password"
+                form {
+                    div {
+                        label {
+                            r#for: "email",
+                            class: "block mb-2 text-sm font-medium text-gray-900 text-white",
+                            "Email"
+                        }
+                        input {
+                            r#type: "text",
+                            id: "email",
+                            class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500",
+                            required: 1,
+                            onchange: move |evt| {
+                                email.set(evt.value());
+                            }
+                        }
                     }
-                    input {
-                        r#type: "password",
-                        id: "password",
-                        class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-                        required: 1
+                    div {
+                        label {
+                            r#for: "password",
+                            class: "block mb-2 text-sm font-medium text-gray-900 text-white",
+                            "Password"
+                        }
+                        input {
+                            r#type: "password",
+                            id: "password",
+                            class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500",
+                            required: 1,
+                            onchange: move |evt| {
+                                password.set(evt.value());
+                            }
+                        }
+                    }
+                    div {
+                        button {
+                            r#type: "button",
+                            class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800 float-right m-2",
+                            onclick: move |_| async move {
+                                let client = reqwest::Client::new();
+                                let res = client.post("http://localhost:3030/user/login")
+                                    .json(&LoginRequest {
+                                        email: email.read().clone(),
+                                        password: password.read().clone(),
+                                    })
+                                    .send()
+                                    .await
+                                    .unwrap()
+                                    .json::<AuthResponse>()
+                                    .await
+                                    .unwrap();
+
+                                let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+                                validation.insecure_disable_signature_validation();
+
+                                let key = DecodingKey::from_secret(&[]);
+                                let payload = jsonwebtoken::decode::<Claims>(res.token.as_str(), &key, &validation).unwrap();
+
+                                *USER.write() = Some(payload.claims);
+                            },
+                            "Login"
+                        }
                     }
                 }
             }

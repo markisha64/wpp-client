@@ -12,10 +12,12 @@ dioxus = { version = "0.6", features = ["web", "router"] }
 # Debug
 dioxus-logger = "0.6"
 
-shared = { path = "/Users/markisha/wpp-server/shared" }
+shared = { git = "https://github.com/markisha64/wpp-server" }
 getrandom = { version = "0.2.15", features = ["js"] }
 uuid = { version = "1.13.1", features = ["js"] }
 manganis = "0.6.2"
+reqwest = { version = "0.12.12", features = ["json"] }
+jsonwebtoken = "9.3.1"
 
 [profile]
 
