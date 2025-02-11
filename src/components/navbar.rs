@@ -1,9 +1,27 @@
+use chrono::Utc;
 use dioxus::prelude::*;
+use jsonwebtoken::DecodingKey;
 use shared::api::user::Claims;
+use web_sys::Storage;
 
 use crate::route::Route;
 
-pub static USER: GlobalSignal<Option<Claims>> = Signal::global(|| None);
+pub static USER: GlobalSignal<Option<Claims>> = Signal::global(|| {
+    let storage = web_sys::window()?.local_storage().ok()??;
+    let jwt_token = storage.get_item("jwt_token").ok()??;
+
+    let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+    validation.insecure_disable_signature_validation();
+
+    let key = DecodingKey::from_secret(&[]);
+    let payload = jsonwebtoken::decode::<Claims>(jwt_token.as_str(), &key, &validation).ok()?;
+
+    if payload.claims.exp >= Utc::now().timestamp() as usize {
+        return None;
+    }
+
+    Some(payload.claims)
+});
 
 #[component]
 pub fn NavBar() -> Element {

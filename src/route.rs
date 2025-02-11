@@ -8,10 +8,8 @@ pub enum Route {
     #[layout(NavBar)]
     #[route("/")]
     Home,
-    #[end_layout]
-
     #[nest("/login")]
-    #[layout(NavBar)]
         #[route("/")]
         Login,
+
 }
