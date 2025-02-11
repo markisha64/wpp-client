@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
 use route::Route;
 
+mod components;
 mod pages;
 mod route;
 
