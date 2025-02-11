@@ -6,7 +6,6 @@ module.exports = {
     "./dist/**/*.html"
   ],
   theme: {
-    extend: {},
   },
   plugins: [],
 };

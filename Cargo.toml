@@ -7,14 +7,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = { version = "0.5.1", features = ["web", "router"] }
+dioxus = { version = "0.6", features = ["web", "router"] }
 
 # Debug
-dioxus-logger = "0.5.1"
+dioxus-logger = "0.6"
 
 shared = { path = "/Users/markisha/wpp-server/shared" }
 getrandom = { version = "0.2.15", features = ["js"] }
 uuid = { version = "1.13.1", features = ["js"] }
+manganis = "0.6.2"
 
 [profile]
 
