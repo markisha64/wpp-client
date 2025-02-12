@@ -3,10 +3,28 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::Claims;
+use shared::api::websocket::{
+    WebsocketClientMessage, WebsocketClientMessageData, WebsocketServerMessage,
+    WebsocketServerResData,
+};
+use shared::models::chat::ChatSafe;
+use ws_stream_wasm::WsMessage::Text;
 
 use crate::route::Route;
 
-pub static USER: GlobalSignal<Option<Claims>> = Signal::global(|| {
+#[derive(Clone)]
+pub struct Auth {
+    pub claims: Claims,
+    pub token: String,
+}
+use futures_util::{
+    future::{select, Either},
+    SinkExt, StreamExt,
+};
+use uuid::Uuid;
+use {pharos::*, ws_stream_wasm::*};
+
+pub static USER: GlobalSignal<Option<Auth>> = Signal::global(|| {
     let storage = web_sys::window()?.local_storage().ok()??;
     let jwt_token = storage.get_item("jwt_token").ok()??;
 
@@ -24,8 +42,13 @@ pub static USER: GlobalSignal<Option<Claims>> = Signal::global(|| {
         return None;
     }
 
-    Some(payload.claims)
+    Some(Auth {
+        claims: payload.claims,
+        token: jwt_token,
+    })
 });
+
+pub static CHATS: GlobalSignal<Vec<ChatSafe>> = Signal::global(|| Vec::new());
 
 #[component]
 pub fn NavBar() -> Element {
@@ -33,11 +56,84 @@ pub fn NavBar() -> Element {
     let display_login = user_r.is_none();
     let display_name = user_r.clone();
 
+    let ws = use_coroutine(
+        move |mut rx: UnboundedReceiver<WebsocketClientMessage>| async move {
+            let token = USER.read().clone().map(|x| x.token);
+
+            if let Some(token) = token {
+                let (mut ws, mut wsio) =
+                    WsMeta::connect(format!("ws://localhost:3030/ws/?jwt_token={}", token), None)
+                        .await
+                        .unwrap();
+
+                let mut evts = ws.observe(ObserveConfig::default()).await.unwrap();
+
+                let chats_request_id = Uuid::new_v4();
+                wsio.send(WsMessage::Text(
+                    serde_json::to_string(&WebsocketClientMessage {
+                        id: chats_request_id,
+                        data: WebsocketClientMessageData::GetChats,
+                    })
+                    .unwrap(),
+                ))
+                .await
+                .unwrap();
+
+                loop {
+                    let rrx = rx.next();
+                    let evtx = select(evts.next(), wsio.next());
+
+                    match select(rrx, evtx).await {
+                        Either::Left((x, _)) => {
+                            if let Some(message) = x {
+                                let _ = wsio
+                                    .send(WsMessage::Text(serde_json::to_string(&message).unwrap()))
+                                    .await;
+                            }
+                        }
+
+                        Either::Right((Either::Left((x, _)), _)) => {
+                            tracing::info!("websocket event {:?}", x);
+                            break;
+                        }
+
+                        Either::Right((Either::Right((x, _)), _)) => {
+                            if let Some(Text(payload)) = x {
+                                if let Ok(message) =
+                                    serde_json::from_str::<WebsocketServerMessage>(&payload)
+                                {
+                                    match message {
+                                        WebsocketServerMessage::RequestResponse {
+                                            id,
+                                            data,
+                                            error,
+                                        } => {
+                                            if let Some(response) = data {
+                                                match response {
+                                                    WebsocketServerResData::GetChats(chats) => {
+                                                        *CHATS.write() = chats;
+                                                    }
+                                                    _ => {}
+                                                }
+                                            }
+                                        }
+
+                                        WebsocketServerMessage::NewMessage(message) => {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    );
+
     rsx! {
         nav {
-            class: "mx-auto border-gray-200 bg-gray-900 text-sky-100",
+            class: "fixed top-0 z-50 w-full border-b bg-gray-800 border-gray-700 text-white",
             div {
-                class: "w-full flex flex-wrap items-center justify-between p-4",
+                class: "w-full flex flex-wrap items-center justify-between px-3 py-3 lg:px-5 lg:pl-3",
                 "CHET",
                 if display_login {
                     div {
@@ -53,7 +149,7 @@ pub fn NavBar() -> Element {
                 }
                 else {
                     div {
-                        "{display_name.as_ref().unwrap().user.display_name.clone()}"
+                        "{display_name.as_ref().unwrap().claims.user.display_name.clone()}"
                     }
                 }
             }

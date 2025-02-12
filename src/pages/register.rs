@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, RegisterRequest};
 
-use crate::{components::navbar::USER, route::Route};
+use crate::{
+    components::navbar::{Auth, USER},
+    route::Route,
+};
 
 pub fn Register() -> Element {
     let mut email = use_signal(|| "".to_string());
@@ -106,7 +109,11 @@ pub fn Register() -> Element {
                                 let key = DecodingKey::from_secret(&[]);
                                 let payload = jsonwebtoken::decode::<Claims>(res.token.as_str(), &key, &validation).unwrap();
 
-                                *USER.write() = Some(payload.claims);
+                                *USER.write() = Some(Auth {
+                                    claims: payload.claims,
+                                    token: res.token.clone(),
+                                });
+
                                 web_sys::window()
                                     .unwrap()
                                     .local_storage()
