@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use bson::oid::ObjectId;
 use chrono::Utc;
 use dioxus::prelude::*;
 use dioxus_logger::tracing;
@@ -58,6 +61,8 @@ pub fn NavBar() -> Element {
 
     let ws = use_coroutine(
         move |mut rx: UnboundedReceiver<WebsocketClientMessage>| async move {
+            let mut message_requests: HashMap<Uuid, ObjectId> = HashMap::new();
+
             let token = USER.read().clone().map(|x| x.token);
 
             if let Some(token) = token {
@@ -86,6 +91,10 @@ pub fn NavBar() -> Element {
                     match select(rrx, evtx).await {
                         Either::Left((x, _)) => {
                             if let Some(message) = x {
+                                if let WebsocketClientMessageData::GetMessages(gr) = &message.data {
+                                    message_requests.insert(message.id, gr.chat_id);
+                                }
+
                                 let _ = wsio
                                     .send(WsMessage::Text(serde_json::to_string(&message).unwrap()))
                                     .await;
@@ -113,12 +122,42 @@ pub fn NavBar() -> Element {
                                                     WebsocketServerResData::GetChats(chats) => {
                                                         *CHATS.write() = chats;
                                                     }
+
+                                                    WebsocketServerResData::GetMessages(
+                                                        messages,
+                                                    ) => {
+                                                        if let Some(chat_id) =
+                                                            message_requests.get(&id)
+                                                        {
+                                                            let chats = &mut (*CHATS.write());
+                                                            let chat_o = chats
+                                                                .iter_mut()
+                                                                .find(|x| x.id == *chat_id);
+
+                                                            if let Some(chat) = chat_o {
+                                                                if chat.messages.is_empty() {
+                                                                    chat.messages = messages;
+                                                                } else {
+                                                                    todo!("handle this");
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
                                                     _ => {}
                                                 }
                                             }
                                         }
 
-                                        WebsocketServerMessage::NewMessage(message) => {}
+                                        WebsocketServerMessage::NewMessage(message) => {
+                                            let chats = &mut (*CHATS.write());
+                                            let chat_o =
+                                                chats.iter_mut().find(|x| x.id == message.chat_id);
+
+                                            if let Some(chat) = chat_o {
+                                                chat.messages.push(message);
+                                            }
+                                        }
                                     }
                                 }
                             }
