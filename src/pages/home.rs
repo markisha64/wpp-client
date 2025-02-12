@@ -4,7 +4,6 @@ use dioxus::prelude::*;
 use crate::components::navbar::CHATS;
 
 pub fn Home() -> Element {
-    let chats = CHATS.read().clone();
     let mut selected_chat_signal = use_signal::<Option<ObjectId>>(|| None);
     let selected_chat = selected_chat_signal.read().clone();
 
