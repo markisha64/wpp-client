@@ -9,6 +9,15 @@ pub fn Register() -> Element {
     let mut password = use_signal(|| "".to_string());
     let mut display_name = use_signal(|| "".to_string());
 
+    let is_logged_in = USER.read().is_some();
+    let navigator = use_navigator();
+
+    use_effect(move || {
+        if is_logged_in {
+            navigator.replace(Route::Home);
+        }
+    });
+
     rsx! {
         div {
             class: "flex w-screen",
@@ -98,6 +107,15 @@ pub fn Register() -> Element {
                                 let payload = jsonwebtoken::decode::<Claims>(res.token.as_str(), &key, &validation).unwrap();
 
                                 *USER.write() = Some(payload.claims);
+                                web_sys::window()
+                                    .unwrap()
+                                    .local_storage()
+                                    .unwrap()
+                                    .unwrap()
+                                    .set_item("jwt_token", res.token.as_str())
+                                    .unwrap();
+
+                                navigator.replace(Route::Home);
                             },
                             "Register"
                         }
