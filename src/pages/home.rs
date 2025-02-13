@@ -1,4 +1,5 @@
 use bson::oid::ObjectId;
+use chrono::prelude::*;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -155,7 +156,13 @@ pub fn Home() -> Element {
                                 div {
                                     class: "w-full text-right text-xs",
                                     if let Some(creator) = message.creator {
-                                        "{creator.to_string()}"
+                                        span {
+                                            "{DateTime::<Local>::from(DateTime::<Utc>::from(message.created_at)).format(\"%d/%m/%Y %T\")} "
+                                        }
+                                        span {
+                                            class: "underline",
+                                            "{creator.to_string()}"
+                                        }
                                     } else {
                                         "System"
                                     }
