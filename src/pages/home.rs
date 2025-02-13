@@ -29,6 +29,7 @@ pub fn Home() -> Element {
     )>();
     let mut current_message_signal = use_signal(|| "".to_string());
     let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
+    let mut rerender_signal = use_signal(|| false);
 
     let current_message = current_message_signal();
 
@@ -63,6 +64,7 @@ pub fn Home() -> Element {
             .map(|id| CHATS().iter().find(|x| x.id == id).map(|x| x.clone()))
             .flatten();
         let update_height = update_height_signal();
+        let rerender = rerender_signal();
 
         if let Some(chat) = selected_chat {
             let mut eval = document::eval(
@@ -132,17 +134,20 @@ pub fn Home() -> Element {
                     }
                 }
                 UpdateHeight::GoDown => {
-                    let _ = document::eval(
-                        r#"
+                    if rerender {
+                        let _ = document::eval(
+                            r#"
 
                         const elt = document.getElementById("chat-messages")
                         elt.scrollTop = elt.scrollHeight
                      
                         "#,
-                    )
-                    .await;
+                        )
+                        .await;
 
-                    update_height_signal.set(UpdateHeight::CheckNeed);
+                        update_height_signal.set(UpdateHeight::CheckNeed);
+                        rerender_signal.set(false);
+                    }
                 }
                 UpdateHeight::GoTo(old_height) => {
                     let _ = document::eval(
@@ -165,6 +170,8 @@ pub fn Home() -> Element {
             }
         }
     });
+
+    rerender_signal.set(true);
 
     rsx! {
             aside {
