@@ -135,13 +135,15 @@ pub fn NavBar() -> Element {
                                                                 .find(|x| x.id == *chat_id);
 
                                                             if let Some(chat) = chat_o {
-                                                                messages.extend(
-                                                                    chat.messages
-                                                                        .clone()
-                                                                        .into_iter(),
-                                                                );
+                                                                if messages.len() > 0 {
+                                                                    messages.extend(
+                                                                        chat.messages
+                                                                            .clone()
+                                                                            .into_iter(),
+                                                                    );
 
-                                                                chat.messages = messages;
+                                                                    chat.messages = messages;
+                                                                }
                                                             }
                                                         }
                                                     }
