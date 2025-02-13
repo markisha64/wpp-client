@@ -59,7 +59,7 @@ pub fn Home() -> Element {
 
                 const elt = document.getElementById("chat-messages")
                 const v = elt
-                    ? elt.scrollTop == 0
+                    ? elt.scrollTop <= 16
                     : false
                 const scroll_height = elt
                     ? elt.scrollHeight
