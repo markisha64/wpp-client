@@ -1,6 +1,5 @@
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
-use dioxus_logger::tracing::info;
 use uuid::Uuid;
 
 use crate::components::navbar::CHATS;
@@ -141,7 +140,7 @@ pub fn Home() -> Element {
         div {
             class: "p-4 sm:ml-40 pb-20 max-h-screen overflow-auto",
             id: "chat-messages",
-            onscroll: move |x| async move {
+            onscroll: move |_x| async move {
                 scroll_signal.set(());
             },
             if let Some(chat) = selected_chat {
