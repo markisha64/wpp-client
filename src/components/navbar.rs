@@ -52,6 +52,7 @@ pub static USER: GlobalSignal<Option<Auth>> = Signal::global(|| {
 });
 
 pub static CHATS: GlobalSignal<Vec<ChatSafe>> = Signal::global(|| Vec::new());
+pub static FETCHING_MESSAGES: GlobalSignal<bool> = Signal::global(|| false);
 
 #[component]
 pub fn NavBar() -> Element {
@@ -146,6 +147,7 @@ pub fn NavBar() -> Element {
                                                                 }
                                                             }
                                                         }
+                                                        *FETCHING_MESSAGES.write() = false;
                                                     }
 
                                                     _ => {}

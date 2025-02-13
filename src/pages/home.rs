@@ -3,7 +3,7 @@ use chrono::prelude::*;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-use crate::components::navbar::CHATS;
+use crate::components::navbar::{CHATS, FETCHING_MESSAGES};
 use shared::api::{
     message::CreateRequest,
     message::GetRequest,
@@ -53,6 +53,7 @@ pub fn Home() -> Element {
             .flatten();
         let _ = scroll_signal();
         let scroll_height = scroll_height_signal();
+        let fetching_messages = FETCHING_MESSAGES();
 
         if let Some(chat) = selected_chat {
             let mut eval = document::eval(
@@ -72,31 +73,10 @@ pub fn Home() -> Element {
                 "#,
             );
 
-            let mut scroll_top = eval.recv::<bool>().await.unwrap();
+            let scroll_top = eval.recv::<bool>().await.unwrap();
             let current_scroll_height = eval.recv::<f64>().await.unwrap();
 
-            if scroll_height != current_scroll_height {
-                let new_height = match scroll_top {
-                    true => current_scroll_height - scroll_height,
-                    false => current_scroll_height,
-                };
-
-                scroll_height_signal.set(current_scroll_height);
-                scroll_top = false;
-                let _ = document::eval(
-                    format!(
-                        r#"
-
-                        document.getElementById("chat-messages").scrollTop = {}
-                    
-                        "#,
-                        new_height
-                    )
-                    .as_str(),
-                );
-            }
-
-            if scroll_top {
+            if scroll_top && !fetching_messages {
                 let ts = chat
                     .messages
                     .get(0)
@@ -111,7 +91,21 @@ pub fn Home() -> Element {
                             last_message_ts: ts,
                         }),
                     });
+                    *FETCHING_MESSAGES.write() = true;
                 }
+            } else if scroll_height != current_scroll_height {
+                // scroll_height_signal.set(current_scroll_height);
+                // let _ = document::eval(
+                //     format!(
+                //         r#"
+
+                //         document.getElementById("chat-messages").scrollTop = {}
+
+                //         "#,
+                //         current_scroll_height - scroll_height
+                //     )
+                //     .as_str(),
+                // );
             }
         }
     });
