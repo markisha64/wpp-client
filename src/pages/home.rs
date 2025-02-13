@@ -15,7 +15,7 @@ use shared::api::{
 
 #[derive(Clone)]
 enum UpdateHeight {
-    DontUpdate,
+    CheckNeed,
     GoDown,
     GoTo(f64),
 }
@@ -28,7 +28,7 @@ pub fn Home() -> Element {
         oneshot::Sender<WebsocketServerMessage>,
     )>();
     let mut current_message_signal = use_signal(|| "".to_string());
-    let mut update_height_signal = use_signal(|| UpdateHeight::DontUpdate);
+    let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
 
     let current_message = current_message_signal();
 
@@ -59,55 +59,108 @@ pub fn Home() -> Element {
     let selected_chat_id = selected_chat.as_ref().map(|x| x.id);
 
     let _ = use_resource(move || async move {
-        let selected_chat_id = selected_chat_signal();
+        let selected_chat = selected_chat_signal()
+            .map(|id| CHATS().iter().find(|x| x.id == id).map(|x| x.clone()))
+            .flatten();
         let update_height = update_height_signal();
 
-        if selected_chat_id.is_some() {
+        if let Some(chat) = selected_chat {
             let mut eval = document::eval(
                 r#"
 
                 const elt = document.getElementById("chat-messages")
-                const scroll_height = elt
-                    ? elt.scrollHeight
-                    : 0.0
+                const v = elt.scrollTop <= 16
+                const scroll_height = elt.scrollHeight
+
+                dioxus.send(v);
                 dioxus.send(scroll_height)
                      
                 "#,
             );
 
+            let scroll_top = eval.recv::<bool>().await.unwrap();
             let current_height = eval.recv::<f64>().await.unwrap();
 
             match update_height {
-                UpdateHeight::DontUpdate => {}
+                UpdateHeight::CheckNeed => {
+                    // check if need update
+                    if !scroll_top {
+                        return;
+                    }
+
+                    let ts = chat
+                        .messages
+                        .get(0)
+                        .map(|x| x.created_at)
+                        .unwrap_or(chat.last_message_ts);
+
+                    let (tx, rx) = oneshot::channel();
+
+                    ws_channel.send((
+                        WebsocketClientMessage {
+                            id: Uuid::new_v4(),
+                            data: WebsocketClientMessageData::GetMessages(GetRequest {
+                                chat_id: chat.id,
+                                last_message_ts: ts,
+                            }),
+                        },
+                        tx,
+                    ));
+
+                    let mut messages = match rx.await {
+                        Ok(WebsocketServerMessage::RequestResponse { id, data, error }) => {
+                            match data {
+                                Some(WebsocketServerResData::GetMessages(messages)) => messages,
+                                _ => Vec::new(),
+                            }
+                        }
+
+                        _ => Vec::new(),
+                    };
+
+                    if messages.len() == 0 {
+                        return;
+                    }
+
+                    let mut chats = CHATS.write();
+                    let chat_o = chats.iter_mut().find(|x| x.id == chat.id);
+
+                    if let Some(chat_m) = chat_o {
+                        messages.extend(chat.messages.into_iter());
+                        chat_m.messages = messages;
+                        update_height_signal.set(UpdateHeight::GoTo(current_height));
+                    }
+                }
                 UpdateHeight::GoDown => {
                     let _ = document::eval(
                         r#"
 
                         const elt = document.getElementById("chat-messages")
-                        if (elt) {
-                            elt.scrollTop = elt.scrollHeight
-                        }
+                        elt.scrollTop = elt.scrollHeight
                      
                         "#,
                     )
                     .await;
+
+                    update_height_signal.set(UpdateHeight::CheckNeed);
                 }
-                UpdateHeight::GoTo(h) => {
+                UpdateHeight::GoTo(old_height) => {
                     let _ = document::eval(
                         format!(
                             r#"
 
                             const elt = document.getElementById("chat-messages")
-                            if (elt) {{
-                                elt.scrollTop = {}
-                            }}
+                            elt.scrollTop = {}
+                            console.log(elt.scrollTop)
                      
                             "#,
-                            current_height - h
+                            current_height - old_height
                         )
                         .as_str(),
                     )
                     .await;
+
+                    update_height_signal.set(UpdateHeight::CheckNeed);
                 }
             }
         }
@@ -127,6 +180,7 @@ pub fn Home() -> Element {
                                     onclick: move |_| {
                                         async move {
                                             selected_chat_signal.set(Some(id));
+                                            update_height_signal.set(UpdateHeight::GoDown);
                                         }
                                     },
                                     span {
@@ -143,76 +197,7 @@ pub fn Home() -> Element {
                 class: "p-4 sm:ml-40 pb-20 max-h-screen overflow-auto",
                 id: "chat-messages",
                 onscroll: move |_| {
-                    to_owned![selected_chat];
-
-                    async move {
-                        if let Some(chat) = selected_chat {
-
-                            let mut eval = document::eval(
-                                r#"
-
-                                const elt = document.getElementById("chat-messages")
-                                const v = elt
-                                    ? elt.scrollTop <= 16
-                                    : false
-                                const scroll_height = elt
-                                    ? elt.scrollHeight
-                                    : 0.0
-
-                                dioxus.send(v)
-                                dioxus.send(scroll_height)
- 
-                                "#,
-                                );
-
-
-                            let scroll_top = eval.recv::<bool>().await.unwrap();
-                            let current_height = eval.recv::<f64>().await.unwrap();
-
-                            if scroll_top {
-                                let ts = chat
-                                    .messages
-                                    .get(0)
-                                    .map(|x| x.created_at)
-                                    .unwrap_or(chat.last_message_ts);
-
-                                let (tx, rx) = oneshot::channel();
-
-                                ws_channel.send((
-                                    WebsocketClientMessage {
-                                        id: Uuid::new_v4(),
-                                        data: WebsocketClientMessageData::GetMessages(GetRequest {
-                                            chat_id: chat.id,
-                                            last_message_ts: ts,
-                                        }),
-                                    },
-                                    tx,
-                                ));
-
-                                let mut messages = match rx.await {
-                                    Ok(WebsocketServerMessage::RequestResponse { id, data, error }) => match data {
-                                        Some(WebsocketServerResData::GetMessages(messages)) => messages,
-                                        _ => Vec::new(),
-                                    },
-
-                                    _ => Vec::new(),
-                                };
-
-                                if messages.len() == 0 {
-                                    return;
-                                }
-
-                                let mut chats = CHATS.write();
-                                let chat_o = chats.iter_mut().find(|x| x.id == chat.id);
-
-                                if let Some(chat_m) = chat_o {
-                                    messages.extend(chat.messages.into_iter());
-                                    chat_m.messages = messages;
-                                    update_height_signal.set(UpdateHeight::GoTo(current_height));
-                                }
-                            }
-                        }
-                    }
+                    update_height_signal.set(UpdateHeight::CheckNeed);
                 },
                 if let Some(chat) = selected_chat_2 {
                     div {
