@@ -59,7 +59,7 @@ pub fn NavBar() -> Element {
     let display_login = user_r.is_none();
     let display_name = user_r.clone();
 
-    let ws = use_coroutine(
+    use_coroutine(
         move |mut rx: UnboundedReceiver<WebsocketClientMessage>| async move {
             let mut message_requests: HashMap<Uuid, ObjectId> = HashMap::new();
 
@@ -124,7 +124,7 @@ pub fn NavBar() -> Element {
                                                     }
 
                                                     WebsocketServerResData::GetMessages(
-                                                        messages,
+                                                        mut messages,
                                                     ) => {
                                                         if let Some(chat_id) =
                                                             message_requests.get(&id)
@@ -135,11 +135,13 @@ pub fn NavBar() -> Element {
                                                                 .find(|x| x.id == *chat_id);
 
                                                             if let Some(chat) = chat_o {
-                                                                if chat.messages.is_empty() {
-                                                                    chat.messages = messages;
-                                                                } else {
-                                                                    todo!("handle this");
-                                                                }
+                                                                messages.extend(
+                                                                    chat.messages
+                                                                        .clone()
+                                                                        .into_iter(),
+                                                                );
+
+                                                                chat.messages = messages;
                                                             }
                                                         }
                                                     }
