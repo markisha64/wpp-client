@@ -23,7 +23,7 @@ pub fn Home() -> Element {
         .iter()
         .map(|x| {
             (
-                x.clone(),
+                x.name.clone(),
                 x.id,
                 match Some(x.id) == selected_chat {
                     true => "bg-gray-700",
@@ -35,12 +35,26 @@ pub fn Home() -> Element {
 
     let selected_chat = selected_chat
         .map(|x| {
-            chats
+            CHATS
+                .read()
                 .iter()
-                .find(|(_, id, _)| *id == x)
-                .map(|(chat, _, _)| chat.clone())
+                .find(|chat| chat.id == x)
+                .map(|chat| chat.clone())
         })
         .flatten();
+
+    if let Some(chat) = selected_chat.as_ref() {
+        if chat.messages.len() == 0 {
+            ws_channel.send(WebsocketClientMessage {
+                id: Uuid::new_v4(),
+                data: WebsocketClientMessageData::GetMessages(GetRequest {
+                    chat_id: chat.id,
+                    last_message_ts: chat.last_message_ts,
+                }),
+            });
+        }
+    }
+
     let selected_chat_id = selected_chat.as_ref().map(|x| x.id);
 
     rsx! {
@@ -50,21 +64,16 @@ pub fn Home() -> Element {
                 class: "h-full px-3 py-4 overflow-y-auto bg-gray-800",
                 ul {
                     class: "space-y-2 font-medium",
-                    for (chat, id, class) in chats {
+                    for (name, id, class) in chats {
                         li {
                             a {
                                 class: "items-center p-2 rounded-lg text-white hover:bg-gray-600 group {class}",
                                 onclick: move |_| async move {
                                     selected_chat_signal.set(Some(id));
-
-                                    ws_channel.send(WebsocketClientMessage { id: Uuid::new_v4(), data: WebsocketClientMessageData::GetMessages(GetRequest {
-                                        chat_id: id,
-                                        last_message_ts: chat.last_message_ts
-                                    })});
                                 },
                                 span {
                                     class: "flex-1 ms-3 whitespace-nowrap",
-                                    "{chat.name}"
+                                    "{name}"
                                 }
                             }
                         }
