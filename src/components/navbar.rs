@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use bson::oid::ObjectId;
 use chrono::Utc;
 use dioxus::prelude::*;
 use dioxus_logger::tracing;
@@ -11,6 +10,7 @@ use shared::api::websocket::{
     WebsocketServerResData,
 };
 use shared::models::chat::ChatSafe;
+use tokio::sync::oneshot;
 use ws_stream_wasm::WsMessage::Text;
 
 use crate::route::Route;
@@ -52,7 +52,6 @@ pub static USER: GlobalSignal<Option<Auth>> = Signal::global(|| {
 });
 
 pub static CHATS: GlobalSignal<Vec<ChatSafe>> = Signal::global(|| Vec::new());
-pub static FETCHING_MESSAGES: GlobalSignal<bool> = Signal::global(|| false);
 
 #[component]
 pub fn NavBar() -> Element {
@@ -61,8 +60,12 @@ pub fn NavBar() -> Element {
     let display_name = user_r.clone();
 
     use_coroutine(
-        move |mut rx: UnboundedReceiver<WebsocketClientMessage>| async move {
-            let mut message_requests: HashMap<Uuid, ObjectId> = HashMap::new();
+        move |mut rx: UnboundedReceiver<(
+            WebsocketClientMessage,
+            oneshot::Sender<WebsocketServerMessage>,
+        )>| async move {
+            let mut message_requests: HashMap<Uuid, oneshot::Sender<WebsocketServerMessage>> =
+                HashMap::new();
 
             let token = USER().clone().map(|x| x.token);
 
@@ -91,14 +94,13 @@ pub fn NavBar() -> Element {
 
                     match select(rrx, evtx).await {
                         Either::Left((x, _)) => {
-                            if let Some(message) = x {
-                                if let WebsocketClientMessageData::GetMessages(gr) = &message.data {
-                                    message_requests.insert(message.id, gr.chat_id);
+                            if let Some((request, responder)) = x {
+                                if let Ok(_) = wsio
+                                    .send(WsMessage::Text(serde_json::to_string(&request).unwrap()))
+                                    .await
+                                {
+                                    message_requests.insert(request.id, responder);
                                 }
-
-                                let _ = wsio
-                                    .send(WsMessage::Text(serde_json::to_string(&message).unwrap()))
-                                    .await;
                             }
                         }
 
@@ -112,48 +114,21 @@ pub fn NavBar() -> Element {
                                 if let Ok(message) =
                                     serde_json::from_str::<WebsocketServerMessage>(&payload)
                                 {
-                                    match message {
+                                    match &message {
                                         WebsocketServerMessage::RequestResponse {
                                             id,
                                             data,
                                             error,
-                                        } => {
-                                            if let Some(response) = data {
-                                                match response {
-                                                    WebsocketServerResData::GetChats(chats) => {
-                                                        *CHATS.write() = chats;
-                                                    }
-
-                                                    WebsocketServerResData::GetMessages(
-                                                        mut messages,
-                                                    ) => {
-                                                        if let Some(chat_id) =
-                                                            message_requests.get(&id)
-                                                        {
-                                                            let chats = &mut (*CHATS.write());
-                                                            let chat_o = chats
-                                                                .iter_mut()
-                                                                .find(|x| x.id == *chat_id);
-
-                                                            if let Some(chat) = chat_o {
-                                                                if messages.len() > 0 {
-                                                                    messages.extend(
-                                                                        chat.messages
-                                                                            .clone()
-                                                                            .into_iter(),
-                                                                    );
-
-                                                                    chat.messages = messages;
-                                                                }
-                                                            }
-                                                        }
-                                                        *FETCHING_MESSAGES.write() = false;
-                                                    }
-
-                                                    _ => {}
+                                        } => match data {
+                                            Some(WebsocketServerResData::GetChats(chats)) => {
+                                                *CHATS.write() = chats.clone();
+                                            }
+                                            _ => {
+                                                if let Some(x) = message_requests.remove(id) {
+                                                    let _ = x.send(message.clone());
                                                 }
                                             }
-                                        }
+                                        },
 
                                         WebsocketServerMessage::NewMessage(message) => {
                                             let chats = &mut (*CHATS.write());
@@ -163,7 +138,7 @@ pub fn NavBar() -> Element {
                                             if let Some(chat) = chat_o {
                                                 let ts = message.created_at;
 
-                                                chat.messages.push(message);
+                                                chat.messages.push(message.clone());
                                                 chat.last_message_ts = ts;
                                             }
 

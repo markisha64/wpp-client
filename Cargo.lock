@@ -3006,6 +3006,7 @@ dependencies = [
  "reqwest",
  "serde_json",
  "shared",
+ "tokio",
  "uuid",
  "web-sys",
  "ws_stream_wasm",
