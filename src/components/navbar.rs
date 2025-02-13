@@ -159,8 +159,15 @@ pub fn NavBar() -> Element {
                                                 chats.iter_mut().find(|x| x.id == message.chat_id);
 
                                             if let Some(chat) = chat_o {
+                                                let ts = message.created_at;
+
                                                 chat.messages.push(message);
+                                                chat.last_message_ts = ts;
                                             }
+
+                                            chats.sort_by(|a, b| {
+                                                a.last_message_ts.cmp(&b.last_message_ts).reverse()
+                                            })
                                         }
                                     }
                                 }
