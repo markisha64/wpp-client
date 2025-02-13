@@ -55,7 +55,7 @@ pub static CHATS: GlobalSignal<Vec<ChatSafe>> = Signal::global(|| Vec::new());
 
 #[component]
 pub fn NavBar() -> Element {
-    let user_r = USER.read();
+    let user_r = USER();
     let display_login = user_r.is_none();
     let display_name = user_r.clone();
 
@@ -63,7 +63,7 @@ pub fn NavBar() -> Element {
         move |mut rx: UnboundedReceiver<WebsocketClientMessage>| async move {
             let mut message_requests: HashMap<Uuid, ObjectId> = HashMap::new();
 
-            let token = USER.read().clone().map(|x| x.token);
+            let token = USER().clone().map(|x| x.token);
 
             if let Some(token) = token {
                 let (mut ws, mut wsio) =
