@@ -61,9 +61,6 @@ pub fn Home() -> Element {
                 const v = elt
                     ? elt.scrollTop == 0
                     : false
-                const vv = elt
-                    ? elt.scrollHeight > elt.offsetHeight
-                    : false
                 const scroll_height = elt
                     ? elt.scrollHeight
                     : 0.0
@@ -78,6 +75,11 @@ pub fn Home() -> Element {
             let current_scroll_height = eval.recv::<f64>().await.unwrap();
 
             if scroll_height != current_scroll_height {
+                let new_height = match scroll_top {
+                    true => current_scroll_height - scroll_height,
+                    false => current_scroll_height,
+                };
+
                 scroll_height_signal.set(current_scroll_height);
                 scroll_top = false;
                 let _ = document::eval(
@@ -87,7 +89,7 @@ pub fn Home() -> Element {
                         document.getElementById("chat-messages").scrollTop = {}
                     
                         "#,
-                        current_scroll_height - scroll_height
+                        new_height
                     )
                     .as_str(),
                 );
@@ -145,10 +147,11 @@ pub fn Home() -> Element {
             },
             if let Some(chat) = selected_chat {
                 div {
-                    class: "p-4 border-2 border-dashed rounded-lg border-gray-700 mt-14 ",
+                    class: "p-4 mt-14",
                     ul {
                         for message in chat.messages {
                             li {
+                                class: "border-2 border-dashed rounded-lg border-gray-700 m-1 p-1",
                                 div {
                                     class: "w-full text-right text-xs",
                                     if let Some(creator) = message.creator {
