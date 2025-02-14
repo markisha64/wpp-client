@@ -4,11 +4,12 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
 use tokio::sync::oneshot;
 
-use crate::components::navbar::CHATS;
 use shared::api::{
     message::{CreateRequest, GetRequest},
     websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
+
+use crate::CHATS;
 
 #[derive(Clone)]
 enum UpdateHeight {

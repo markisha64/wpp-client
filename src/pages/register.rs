@@ -2,10 +2,7 @@ use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, RegisterRequest};
 
-use crate::{
-    components::navbar::{Auth, USER},
-    route::Route,
-};
+use crate::{components::navbar::Auth, route::Route, USER};
 
 pub fn Register() -> Element {
     let mut email_signal = use_signal(|| "".to_string());
