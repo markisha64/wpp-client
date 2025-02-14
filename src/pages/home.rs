@@ -19,8 +19,8 @@ enum UpdateHeight {
 }
 
 pub fn Home() -> Element {
-    let mut selected_chat_signal = use_signal::<Option<ObjectId>>(|| None);
-    let selected_chat = selected_chat_signal();
+    // defined signals
+    let mut selected_chat_id_signal = use_signal::<Option<ObjectId>>(|| None);
     let ws_channel = use_coroutine_handle::<(
         WebsocketClientMessageData,
         oneshot::Sender<Result<WebsocketServerResData, String>>,
@@ -36,13 +36,22 @@ pub fn Home() -> Element {
         rx
     };
 
-    let chats = CHATS()
+    // dependant signals
+    let selected_chat_id = selected_chat_id_signal();
+    let chats = CHATS();
+
+    let selected_chat = chats
         .iter()
+        .find(|x| Some(x.id) == selected_chat_id)
+        .map(|x| x.clone());
+
+    let chats_mapped = chats
+        .into_iter()
         .map(|x| {
             (
-                x.name.clone(),
+                x.name,
                 x.id,
-                match Some(x.id) == selected_chat {
+                match Some(x.id) == selected_chat_id {
                     true => "bg-gray-700",
                     _ => "",
                 },
@@ -50,24 +59,14 @@ pub fn Home() -> Element {
         })
         .collect::<Vec<_>>();
 
-    let selected_chat = selected_chat
-        .map(|x| {
-            CHATS()
-                .iter()
-                .find(|chat| chat.id == x)
-                .map(|chat| chat.clone())
-        })
-        .flatten();
-    let selected_chat_2 = selected_chat.clone();
-
-    let selected_chat_id = selected_chat.as_ref().map(|x| x.id);
-
     let _ = use_resource(move || async move {
-        let selected_chat = selected_chat_signal()
-            .map(|id| CHATS().iter().find(|x| x.id == id).map(|x| x.clone()))
-            .flatten();
+        // dependant signals
+        let chats = CHATS();
+        let selected_chat_id = selected_chat_id_signal();
         let update_height = update_height_signal();
         let rerender = rerender_signal();
+
+        let selected_chat = chats.into_iter().find(|x| Some(x.id) == selected_chat_id);
 
         if let Some(chat) = selected_chat {
             let mut eval = document::eval(
@@ -182,13 +181,13 @@ pub fn Home() -> Element {
                 class: "h-full px-3 py-4 overflow-y-auto bg-gray-800",
                 ul {
                     class: "space-y-2 font-medium",
-                    for (name, id, class) in chats {
+                    for (name, id, class) in chats_mapped {
                         li {
                             a {
                                 class: "items-center p-2 rounded-lg text-white hover:bg-gray-600 group {class}",
                                 onclick: move |_| {
                                     async move {
-                                        selected_chat_signal.set(Some(id));
+                                        selected_chat_id_signal.set(Some(id));
                                         update_height_signal.set(UpdateHeight::GoDown);
                                     }
                                 },
@@ -208,7 +207,7 @@ pub fn Home() -> Element {
             onscroll: move |_| {
                 update_height_signal.set(UpdateHeight::CheckNeed);
             },
-            if let Some(chat) = selected_chat_2 {
+            if let Some(chat) = selected_chat {
                 div {
                     class: "p-4 mt-14",
                     ul {
