@@ -24,7 +24,7 @@ pub fn Login() -> Element {
 
     rsx! {
         div {
-            class: "flex w-screen",
+            class: "flex w-screen mt-20",
             div {
                 class: "min-w-sm p-6 border border-gray-200 rounded-lg shadow-sm bg-gray-800 border-gray-700 flex-col mx-auto mt-2",
                 h5 {
