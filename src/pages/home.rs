@@ -141,7 +141,7 @@ pub fn Home() -> Element {
 
                         const elt = document.getElementById("chat-messages")
                         elt.scrollTop = elt.scrollHeight
-                     
+         
                         "#,
                         )
                         .await;

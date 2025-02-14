@@ -5,6 +5,8 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
 use route::Route;
 
+use std::env;
+
 use gloo_timers::future::TimeoutFuture;
 use std::collections::HashMap;
 
@@ -74,7 +76,11 @@ fn App() -> Element {
 
                 if let Some(token) = token {
                     if let Ok((mut ws, mut wsio)) = WsMeta::connect(
-                        format!("ws://localhost:3030/ws/?jwt_token={}", token),
+                        format!(
+                            "ws://{}/ws/?jwt_token={}",
+                            env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string()),
+                            token
+                        ),
                         None,
                     )
                     .await

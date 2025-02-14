@@ -1,3 +1,5 @@
+use std::env;
+
 use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, RegisterRequest};
@@ -94,7 +96,7 @@ pub fn Register() -> Element {
 
                                 async move {
                                     let client = reqwest::Client::new();
-                                    let res = client.post("http://localhost:3030/user/register")
+                                    let res = client.post(format!("http://{}/user/register", env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string())))
                                         .json(&RegisterRequest{
                                             display_name,
                                             email,
