@@ -228,7 +228,7 @@ pub fn Home() -> Element {
                                         } else {
                                             span {
                                                 class: "underline",
-                                                "{creator.to_string()}"
+                                                "Unknown({creator.to_string()})"
                                             }
                                         }
                                     } else {
