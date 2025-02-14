@@ -9,10 +9,10 @@ use shared::api::{
     websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
 
-use crate::CHATS;
+use crate::{components, CHATS};
 
 #[derive(Clone)]
-enum UpdateHeight {
+pub enum UpdateHeight {
     CheckNeed,
     GoDown,
     GoTo(f64),
@@ -20,7 +20,7 @@ enum UpdateHeight {
 
 pub fn Home() -> Element {
     // defined signals
-    let mut selected_chat_id_signal = use_signal::<Option<ObjectId>>(|| None);
+    let selected_chat_id_signal = use_signal::<Option<ObjectId>>(|| None);
     let ws_channel = use_coroutine_handle::<(
         WebsocketClientMessageData,
         oneshot::Sender<Result<WebsocketServerResData, String>>,
@@ -44,20 +44,6 @@ pub fn Home() -> Element {
         .iter()
         .find(|x| Some(x.id) == selected_chat_id)
         .map(|x| x.clone());
-
-    let chats_mapped = chats
-        .into_iter()
-        .map(|x| {
-            (
-                x.name,
-                x.id,
-                match Some(x.id) == selected_chat_id {
-                    true => "bg-gray-700",
-                    _ => "",
-                },
-            )
-        })
-        .collect::<Vec<_>>();
 
     let _ = use_resource(move || async move {
         // dependant signals
@@ -175,32 +161,10 @@ pub fn Home() -> Element {
     rerender_signal.set(true);
 
     rsx! {
-        aside {
-            class: "fixed top-0 left-0 z-40 w-40 h-screen pt-20 transition-transform -translate-x-full border-r sm:translate-x-0 bg-gray-800 border-gray-700",
-            div {
-                class: "h-full px-3 py-4 overflow-y-auto bg-gray-800",
-                ul {
-                    class: "space-y-2 font-medium",
-                    for (name, id, class) in chats_mapped {
-                        li {
-                            a {
-                                class: "items-center p-2 rounded-lg text-white hover:bg-gray-600 group {class}",
-                                onclick: move |_| {
-                                    async move {
-                                        selected_chat_id_signal.set(Some(id));
-                                        update_height_signal.set(UpdateHeight::GoDown);
-                                    }
-                                },
-                                span {
-                                    class: "flex-1 ms-3 whitespace-nowrap",
-                                    "{name}"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        components::sidebar::Sidebar {
+            selected_chat_id_signal,
+            update_height_signal
+        },
         div {
             class: "p-4 sm:ml-40 pb-20 max-h-screen overflow-auto",
             id: "chat-messages",
