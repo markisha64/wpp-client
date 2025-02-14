@@ -115,7 +115,7 @@ pub fn NavBar() -> Element {
                                 if let Ok(message) =
                                     serde_json::from_str::<WebsocketServerMessage>(&payload)
                                 {
-                                    match &message {
+                                    match message {
                                         WebsocketServerMessage::RequestResponse { id, data } => {
                                             match data {
                                                 Ok(WebsocketServerResData::GetChats(chats)) => {
@@ -123,8 +123,8 @@ pub fn NavBar() -> Element {
                                                 }
 
                                                 result => {
-                                                    if let Some(x) = message_requests.remove(id) {
-                                                        let _ = x.send(result.clone());
+                                                    if let Some(x) = message_requests.remove(&id) {
+                                                        let _ = x.send(result);
                                                     }
                                                 }
                                             }
@@ -145,6 +145,19 @@ pub fn NavBar() -> Element {
                                             chats.sort_by(|a, b| {
                                                 a.last_message_ts.cmp(&b.last_message_ts).reverse()
                                             })
+                                        }
+
+                                        WebsocketServerMessage::UserJoined { chat_id, user } => {
+                                            let chats = &mut (*CHATS.write());
+                                            let chat_o = chats.iter_mut().find(|x| x.id == chat_id);
+
+                                            if let Some(chat) = chat_o {
+                                                if let None =
+                                                    chat.users.iter().find(|x| x.id == user.id)
+                                                {
+                                                    chat.users.push(user.clone())
+                                                }
+                                            }
                                         }
                                     }
                                 }
