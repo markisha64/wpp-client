@@ -25,11 +25,8 @@ pub fn Home() -> Element {
         WebsocketClientMessageData,
         oneshot::Sender<Result<WebsocketServerResData, String>>,
     )>();
-    let mut current_message_signal = use_signal(|| "".to_string());
     let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
     let mut rerender_signal = use_signal(|| false);
-
-    let current_message = current_message_signal();
 
     let ws_request = move |req| -> oneshot::Receiver<_> {
         let (tx, rx) = oneshot::channel();
@@ -260,14 +257,19 @@ pub fn Home() -> Element {
                     input {
                         r#type: "text",
                         id: "message",
-                        value: "{current_message}",
-                        onchange: move |evt| {
-                            current_message_signal.set(evt.value());
-                        },
-                        onkeyup: move |evt| {
-                            to_owned![current_message];
-
+                        onkeyup: move |evt: Event<KeyboardData>| {
                             async move {
+                                let mut eval = document::eval(
+                                    r#"
+
+                                    const elt = document.getElementById("message")
+                                    dioxus.send(elt.value)
+
+                                    "#
+                                );
+
+                                let current_message = eval.recv::<String>().await.unwrap();
+
                                 if evt.key() == Key::Enter && current_message != "" {
                                     let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
                                        chat_id: selected_chat_id.unwrap(),
@@ -275,7 +277,15 @@ pub fn Home() -> Element {
                                     })).await.unwrap();
 
                                     update_height_signal.set(UpdateHeight::GoDown);
-                                    current_message_signal.set("".to_string());
+
+                                    let _ = document::eval(
+                                        r#"
+
+                                        const elt = document.getElementById("message")
+                                        elt.value = ""
+                                        
+                                        "#
+                                    ).await;
                                 }
                             }
                         },
