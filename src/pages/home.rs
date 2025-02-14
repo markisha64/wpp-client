@@ -30,6 +30,14 @@ pub fn Home() -> Element {
 
     let current_message = current_message_signal();
 
+    let ws_request = move |req| -> oneshot::Receiver<_> {
+        let (tx, rx) = oneshot::channel();
+
+        ws_channel.send((req, tx));
+
+        rx
+    };
+
     let chats = CHATS()
         .iter()
         .map(|x| {
@@ -93,15 +101,10 @@ pub fn Home() -> Element {
                         .map(|x| x.created_at)
                         .unwrap_or(chat.last_message_ts);
 
-                    let (tx, rx) = oneshot::channel();
-
-                    ws_channel.send((
-                        WebsocketClientMessageData::GetMessages(GetRequest {
-                            chat_id: chat.id,
-                            last_message_ts: ts,
-                        }),
-                        tx,
-                    ));
+                    let rx = ws_request(WebsocketClientMessageData::GetMessages(GetRequest {
+                        chat_id: chat.id,
+                        last_message_ts: ts,
+                    }));
 
                     let mut messages = match rx.await {
                         Ok(data) => match data {
@@ -265,14 +268,10 @@ pub fn Home() -> Element {
 
                             async move {
                                 if evt.key() == Key::Enter && current_message != "" {
-                                    let (tx, rx) = oneshot::channel();
-
-                                    ws_channel.send((WebsocketClientMessageData::NewMessage(CreateRequest {
+                                    let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
                                        chat_id: selected_chat_id.unwrap(),
                                         content: current_message
-                                    }), tx));
-
-                                    let _ = rx.await.unwrap();
+                                    })).await.unwrap();
 
                                     update_height_signal.set(UpdateHeight::GoDown);
                                     current_message_signal.set("".to_string());
