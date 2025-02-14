@@ -31,8 +31,6 @@ pub static USER: GlobalSignal<Option<Auth>> = Signal::global(|| {
     let storage = web_sys::window()?.local_storage().ok()??;
     let jwt_token = storage.get_item("jwt_token").ok()??;
 
-    tracing::info!("{}", jwt_token);
-
     let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
     validation.insecure_disable_signature_validation();
 
@@ -61,11 +59,10 @@ pub fn NavBar() -> Element {
 
     use_coroutine(
         move |mut rx: UnboundedReceiver<(
-            WebsocketClientMessage,
-            oneshot::Sender<WebsocketServerMessage>,
+            WebsocketClientMessageData,
+            oneshot::Sender<Result<WebsocketServerResData, String>>,
         )>| async move {
-            let mut message_requests: HashMap<Uuid, oneshot::Sender<WebsocketServerMessage>> =
-                HashMap::new();
+            let mut message_requests: HashMap<Uuid, _> = HashMap::new();
 
             let token = USER().clone().map(|x| x.token);
 
@@ -94,12 +91,16 @@ pub fn NavBar() -> Element {
 
                     match select(rrx, evtx).await {
                         Either::Left((x, _)) => {
-                            if let Some((request, responder)) = x {
+                            if let Some((data, responder)) = x {
+                                let id = Uuid::new_v4();
+
+                                let request = WebsocketClientMessage { id, data };
+
                                 if let Ok(_) = wsio
                                     .send(WsMessage::Text(serde_json::to_string(&request).unwrap()))
                                     .await
                                 {
-                                    message_requests.insert(request.id, responder);
+                                    message_requests.insert(id, responder);
                                 }
                             }
                         }
@@ -120,9 +121,10 @@ pub fn NavBar() -> Element {
                                                 Ok(WebsocketServerResData::GetChats(chats)) => {
                                                     *CHATS.write() = chats.clone();
                                                 }
-                                                _ => {
+
+                                                result => {
                                                     if let Some(x) = message_requests.remove(id) {
-                                                        let _ = x.send(message.clone());
+                                                        let _ = x.send(result.clone());
                                                     }
                                                 }
                                             }

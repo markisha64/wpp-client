@@ -1,16 +1,13 @@
 use bson::oid::ObjectId;
 use chrono::prelude::*;
 use dioxus::prelude::*;
+use dioxus_logger::tracing::info;
 use tokio::sync::oneshot;
-use uuid::Uuid;
 
 use crate::components::navbar::CHATS;
 use shared::api::{
     message::{CreateRequest, GetRequest},
-    websocket::{
-        WebsocketClientMessage, WebsocketClientMessageData, WebsocketServerMessage,
-        WebsocketServerResData,
-    },
+    websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
 
 #[derive(Clone)]
@@ -24,8 +21,8 @@ pub fn Home() -> Element {
     let mut selected_chat_signal = use_signal::<Option<ObjectId>>(|| None);
     let selected_chat = selected_chat_signal();
     let ws_channel = use_coroutine_handle::<(
-        WebsocketClientMessage,
-        oneshot::Sender<WebsocketServerMessage>,
+        WebsocketClientMessageData,
+        oneshot::Sender<Result<WebsocketServerResData, String>>,
     )>();
     let mut current_message_signal = use_signal(|| "".to_string());
     let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
@@ -99,23 +96,29 @@ pub fn Home() -> Element {
                     let (tx, rx) = oneshot::channel();
 
                     ws_channel.send((
-                        WebsocketClientMessage {
-                            id: Uuid::new_v4(),
-                            data: WebsocketClientMessageData::GetMessages(GetRequest {
-                                chat_id: chat.id,
-                                last_message_ts: ts,
-                            }),
-                        },
+                        WebsocketClientMessageData::GetMessages(GetRequest {
+                            chat_id: chat.id,
+                            last_message_ts: ts,
+                        }),
                         tx,
                     ));
 
                     let mut messages = match rx.await {
-                        Ok(WebsocketServerMessage::RequestResponse { id, data }) => match data {
+                        Ok(data) => match data {
                             Ok(WebsocketServerResData::GetMessages(messages)) => messages,
+                            Err(e) => {
+                                info!("{}", e);
+
+                                Vec::new()
+                            }
                             _ => Vec::new(),
                         },
 
-                        _ => Vec::new(),
+                        Err(e) => {
+                            info!("{}", e);
+
+                            Vec::new()
+                        }
                     };
 
                     if messages.len() == 0 {
@@ -253,10 +256,10 @@ pub fn Home() -> Element {
                                     if evt.key() == Key::Enter && current_message != "" {
                                         let (tx, rx) = oneshot::channel();
 
-                                        ws_channel.send((WebsocketClientMessage { id: Uuid::new_v4(), data: WebsocketClientMessageData::NewMessage(CreateRequest {
-                                            chat_id: selected_chat_id.unwrap(),
+                                        ws_channel.send((WebsocketClientMessageData::NewMessage(CreateRequest {
+                                           chat_id: selected_chat_id.unwrap(),
                                             content: current_message
-                                        }) }, tx));
+                                        }), tx));
 
                                         let _ = rx.await.unwrap();
 
