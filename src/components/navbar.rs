@@ -115,20 +115,18 @@ pub fn NavBar() -> Element {
                                     serde_json::from_str::<WebsocketServerMessage>(&payload)
                                 {
                                     match &message {
-                                        WebsocketServerMessage::RequestResponse {
-                                            id,
-                                            data,
-                                            error,
-                                        } => match data {
-                                            Some(WebsocketServerResData::GetChats(chats)) => {
-                                                *CHATS.write() = chats.clone();
-                                            }
-                                            _ => {
-                                                if let Some(x) = message_requests.remove(id) {
-                                                    let _ = x.send(message.clone());
+                                        WebsocketServerMessage::RequestResponse { id, data } => {
+                                            match data {
+                                                Ok(WebsocketServerResData::GetChats(chats)) => {
+                                                    *CHATS.write() = chats.clone();
+                                                }
+                                                _ => {
+                                                    if let Some(x) = message_requests.remove(id) {
+                                                        let _ = x.send(message.clone());
+                                                    }
                                                 }
                                             }
-                                        },
+                                        }
 
                                         WebsocketServerMessage::NewMessage(message) => {
                                             let chats = &mut (*CHATS.write());

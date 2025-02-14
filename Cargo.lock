@@ -2207,7 +2207,7 @@ dependencies = [
 [[package]]
 name = "shared"
 version = "0.1.0"
-source = "git+https://github.com/markisha64/wpp-server#c0b97ec5325ec7e1a2f0a0f1155283af5b298244"
+source = "git+https://github.com/markisha64/wpp-server#15e21b045bf97e25ba0a869f81ce879c7ebdff2b"
 dependencies = [
  "bson",
  "serde",

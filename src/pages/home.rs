@@ -110,12 +110,10 @@ pub fn Home() -> Element {
                     ));
 
                     let mut messages = match rx.await {
-                        Ok(WebsocketServerMessage::RequestResponse { id, data, error }) => {
-                            match data {
-                                Some(WebsocketServerResData::GetMessages(messages)) => messages,
-                                _ => Vec::new(),
-                            }
-                        }
+                        Ok(WebsocketServerMessage::RequestResponse { id, data }) => match data {
+                            Ok(WebsocketServerResData::GetMessages(messages)) => messages,
+                            _ => Vec::new(),
+                        },
 
                         _ => Vec::new(),
                     };
