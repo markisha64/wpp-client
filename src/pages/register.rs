@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context};
 use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, RegisterRequest};
@@ -8,6 +9,8 @@ pub fn Register() -> Element {
     let mut email_signal = use_signal(|| "".to_string());
     let mut password_signal = use_signal(|| "".to_string());
     let mut display_name_signal = use_signal(|| "".to_string());
+
+    let toast_handle = use_coroutine_handle::<anyhow::Error>();
 
     let email = email_signal().clone();
     let password = password_signal().clone();
@@ -92,42 +95,50 @@ pub fn Register() -> Element {
                             onclick: move |_| {
                                 to_owned![display_name, email, password];
 
-                                async move {
-                                    let client = reqwest::Client::new();
-                                    let res = client.post(format!("{}/user/register", BACKEND_URL))
-                                        .json(&RegisterRequest{
-                                            display_name,
-                                            email,
-                                            password,
-                                        })
-                                        .send()
-                                        .await
-                                        .unwrap()
-                                        .json::<AuthResponse>()
-                                        .await
-                                        .unwrap();
+                                spawn(async move {
+                                    let task: anyhow::Result<()> = async move {
+                                        let client = reqwest::Client::new();
+                                        let res = client.post(format!("{}/user/register", BACKEND_URL))
+                                            .json(&RegisterRequest{
+                                                display_name,
+                                                email,
+                                                password,
+                                            })
+                                            .send()
+                                            .await?
+                                            .error_for_status()?
+                                            .json::<AuthResponse>()
+                                            .await?;
 
-                                    let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
-                                    validation.insecure_disable_signature_validation();
+                                        let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+                                        validation.insecure_disable_signature_validation();
 
-                                    let key = DecodingKey::from_secret(&[]);
-                                    let payload = jsonwebtoken::decode::<Claims>(res.token.as_str(), &key, &validation).unwrap();
+                                        let key = DecodingKey::from_secret(&[]);
+                                        let payload = jsonwebtoken::decode::<Claims>(res.token.as_str(), &key, &validation).unwrap();
 
-                                    *USER.write() = Some(Auth {
-                                        claims: payload.claims,
-                                        token: res.token.clone(),
-                                    });
+                                        *USER.write() = Some(Auth {
+                                            claims: payload.claims,
+                                            token: res.token.clone(),
+                                        });
 
-                                    web_sys::window()
-                                        .unwrap()
-                                        .local_storage()
-                                        .unwrap()
-                                        .unwrap()
-                                        .set_item("jwt_token", res.token.as_str())
-                                        .unwrap();
+                                        web_sys::window()
+                                            .context("failed to get window")?
+                                            .local_storage()
+                                            .map_err(|_| anyhow!("failed to get local storage"))?
+                                            .context("failed to get local storage")?
+                                            .set_item("jwt_token", res.token.as_str())
+                                            .map_err(|_| anyhow!("failed to get local storage"))?;
 
-                                    navigator.replace(Route::Home);
-                                }
+                                        navigator.replace(Route::Home)
+                                            .context("failed navigation")?;
+
+                                        Ok(())
+                                    }.await;
+
+                                    if let Err(err) = task {
+                                        toast_handle.send(err);
+                                    }
+                                });
                             } ,
                             "Register"
                         }

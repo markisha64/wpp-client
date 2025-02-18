@@ -67,6 +67,39 @@ pub static USER: GlobalSignal<Option<Auth>> = Signal::global(|| {
 pub static CHATS: GlobalSignal<Vec<ChatSafe>> = Signal::global(|| Vec::new());
 
 fn App() -> Element {
+    use_coroutine(move |mut rx: UnboundedReceiver<anyhow::Error>| async move {
+        let _ = document::eval(
+            r#"
+
+            let e = document.getElementById('toast');    
+            e.onclick = () => {
+                e.classList.add('hidden')
+            }
+                
+            "#,
+        )
+        .await;
+
+        while let Some(msg) = rx.next().await {
+            let _ = document::eval(
+                format!(
+                    r#"
+
+                let ec = document.getElementById('toast-content');    
+                ec.innerHTML = "{}"
+
+                let e = document.getElementById('toast');    
+                e.classList.remove('hidden')
+                
+                "#,
+                    msg
+                )
+                .as_str(),
+            )
+            .await;
+        }
+    });
+
     use_coroutine(
         move |mut rx: UnboundedReceiver<(
             WebsocketClientMessageData,
@@ -191,10 +224,13 @@ fn App() -> Element {
                             }
                         }
                     }
+
+                    // wait for reconnect
+                    TimeoutFuture::new(10000).await;
                 }
 
-                // wait for reconnect
-                TimeoutFuture::new(10000).await;
+                // wait for recheck token
+                TimeoutFuture::new(1000).await;
             }
         },
     );
@@ -202,6 +238,17 @@ fn App() -> Element {
     rsx! {
         document::Stylesheet {
             href: asset!("/assets/tailwind.css")
+        }
+        div {
+            id: "toast",
+            class: "fixed top-5 right-5 z-70 hidden",
+            div {
+                class: "bg-red-500 p-4 rounded-lg shadow-lg w-72 flex justify-between items-center",
+                p {
+                    id: "toast-content",
+                    ""
+                }
+            }
         }
         Router::<Route> {}
     }
