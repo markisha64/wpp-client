@@ -131,7 +131,7 @@ pub fn Sidebar(
                                         .map_err(|err| anyhow!(err))
                                         .and_then(|data| match data {
                                             Ok(WebsocketServerResData::CreateChat(chat)) => Ok(chat),
-                                            Ok(_) => Err(anyhow!("unexpected resposne")),
+                                            Ok(_) => Err(anyhow!("unexpected response")),
                                             Err(e) => Err(anyhow!(e))
                                         });
 
