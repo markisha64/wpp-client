@@ -32,8 +32,8 @@ mod pages;
 mod route;
 
 // this sucks ass
-pub static BACKEND_URL: &str = "https://wpp-api.grizelj.com.hr";
-pub static BACKEND_URL_WS: &str = "wss://wpp-api.grizelj.com.hr";
+pub static BACKEND_URL: &str = "http://localhost:3030";
+pub static BACKEND_URL_WS: &str = "ws://localhost:3030";
 
 fn main() {
     // Init logger
