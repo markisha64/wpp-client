@@ -1,5 +1,11 @@
+use anyhow::anyhow;
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
+use shared::api::{
+    chat::CreateRequest,
+    websocket::{WebsocketClientMessageData, WebsocketServerResData},
+};
+use tokio::sync::oneshot;
 
 use crate::{pages::home::UpdateHeight, CHATS};
 
@@ -10,6 +16,19 @@ pub fn Sidebar(
 ) -> Element {
     let selected_chat_id = selected_chat_id_signal();
     let chats = CHATS();
+
+    let ws_channel = use_coroutine_handle::<(
+        WebsocketClientMessageData,
+        oneshot::Sender<Result<WebsocketServerResData, String>>,
+    )>();
+
+    let ws_request = move |req| -> oneshot::Receiver<_> {
+        let (tx, rx) = oneshot::channel();
+
+        ws_channel.send((req, tx));
+
+        rx
+    };
 
     let chats_mapped = chats
         .into_iter()
@@ -32,15 +51,25 @@ pub fn Sidebar(
                 class: "h-full px-3 py-4 overflow-y-auto bg-gray-800",
                 ul {
                     class: "space-y-2 font-medium",
+                    li {
+                        class: "items-center p-2 rounded-lg text-white hover:bg-gray-600 group",
+                        onclick: move |_| {
+                            async move {
+                                let _ = document::eval("document.getElementById('new-chat-modal').classList.remove('hidden')").await;
+                            }
+                        },
+                        span {
+                            class: "flex-1 ms-3 whitespace-nowrap",
+                            "New Chat"
+                        }
+                    },
                     for (name, id, class) in chats_mapped {
                         li {
                             a {
                                 class: "items-center p-2 rounded-lg text-white hover:bg-gray-600 group {class}",
                                 onclick: move |_| {
-                                    async move {
-                                        selected_chat_id_signal.set(Some(id));
-                                        update_height_signal.set(UpdateHeight::GoDown);
-                                    }
+                                    update_height_signal.set(UpdateHeight::GoDown);
+                                    selected_chat_id_signal.set(Some(id));
                                 },
                                 span {
                                     class: "flex-1 ms-3 whitespace-nowrap",
@@ -48,6 +77,86 @@ pub fn Sidebar(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        div {
+            id: "new-chat-modal",
+            class: "fixed inset-0 gray-800 bg-opacity-50 flex items-center justify-center hidden",
+            div {
+                class: "bg-gray-800 p-6 rounded-lg w-96",
+                div {
+                    class: "flex flex-col items-center",
+                    h2 {
+                        class: "text-xl font-semibold text-white",
+                        "New Chat"
+                    }
+                    div {
+                        label {
+                            r#for: "chat_name",
+                            class: "block mb-2 text-sm font-medium text-white",
+                            "Chat Name"
+                        }
+                        input {
+                            r#type: "text",
+                            id: "chat_name",
+                            class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500",
+                            required: 1,
+                        }
+                    }
+                    button {
+                        r#type: "button",
+                        class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800 float-right m-2",
+                        onclick: move |_| {
+                            async move {
+                                let mut eval = document::eval(
+                                    r#"
+
+                                    const elt = document.getElementById("chat_name")
+                                    dioxus.send(elt.value)
+
+                                    "#
+                                );
+
+                                let current_name = eval.recv::<String>().await.unwrap();
+
+                                if current_name.len() > 0 {
+                                    let new_chat_r = ws_request(WebsocketClientMessageData::CreateChat(CreateRequest {
+                                        name: current_name
+                                    })).await;
+
+                                    let new_chat = new_chat_r
+                                        .map_err(|err| anyhow!(err))
+                                        .and_then(|data| match data {
+                                            Ok(WebsocketServerResData::CreateChat(chat)) => Ok(chat),
+                                            Ok(_) => Err(anyhow!("unexpected resposne")),
+                                            Err(e) => Err(anyhow!(e))
+                                        });
+
+                                    if let Ok(chat) = new_chat {
+                                        let chat_id = chat.id;
+                                        // borrow both here to avoid race conditions
+                                        let chats = &mut (*CHATS.write());
+
+                                        let selected_chat_id = &mut (*selected_chat_id_signal.write());
+
+                                        *selected_chat_id = Some(chat_id);
+
+                                        chats.push(chat);
+                                        chats.sort_by(|a, b| {
+                                            a.last_message_ts
+                                                .cmp(&b.last_message_ts)
+                                                .reverse()
+                                        });
+
+                                        let _ = document::eval("document.getElementById('new-chat-modal').classList.add('hidden')").await;
+                                    }
+                                }
+                            }
+                        },
+                        "Create"
                     }
                 }
             }

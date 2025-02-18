@@ -4,9 +4,12 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
 use tokio::sync::oneshot;
 
-use shared::api::{
-    message::{CreateRequest, GetRequest},
-    websocket::{WebsocketClientMessageData, WebsocketServerResData},
+use shared::{
+    api::{
+        message::{CreateRequest, GetRequest},
+        websocket::{WebsocketClientMessageData, WebsocketServerResData},
+    },
+    models::chat_message::ChatMessageSafe,
 };
 
 use crate::{components, CHATS};
