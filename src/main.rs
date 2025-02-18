@@ -191,10 +191,13 @@ fn App() -> Element {
                             }
                         }
                     }
+
+                    // wait for reconnect
+                    TimeoutFuture::new(10000).await;
                 }
 
-                // wait for reconnect
-                TimeoutFuture::new(10000).await;
+                // wait for recheck token
+                TimeoutFuture::new(1000).await;
             }
         },
     );
