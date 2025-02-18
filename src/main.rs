@@ -5,8 +5,6 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
 use route::Route;
 
-use std::env;
-
 use gloo_timers::future::TimeoutFuture;
 use std::collections::HashMap;
 
@@ -33,6 +31,7 @@ mod components;
 mod pages;
 mod route;
 
+// this sucks ass
 pub static BACKEND_URL: &str = "https://wpp-api.grizelj.com.hr";
 pub static BACKEND_URL_WS: &str = "wss://wpp-api.grizelj.com.hr";
 

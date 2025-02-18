@@ -1,5 +1,3 @@
-use std::env;
-
 use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, LoginRequest};
