@@ -238,6 +238,8 @@ pub fn Sidebar(
 
                                         if r.is_ok() {
                                             let _ = document::eval("document.getElementById('new-chat-modal').classList.add('hidden')").await;
+
+                                            let _ = ws_request(WebsocketClientMessageData::GetChats).await;
                                         }
                                     }
                                 }
