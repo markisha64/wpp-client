@@ -4,12 +4,9 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
 use tokio::sync::oneshot;
 
-use shared::{
-    api::{
-        message::{CreateRequest, GetRequest},
-        websocket::{WebsocketClientMessageData, WebsocketServerResData},
-    },
-    models::chat_message::ChatMessageSafe,
+use shared::api::{
+    message::{CreateRequest, GetRequest},
+    websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
 
 use crate::{components, CHATS};
@@ -81,11 +78,7 @@ pub fn Home() -> Element {
                         return;
                     }
 
-                    let ts = chat
-                        .messages
-                        .get(0)
-                        .map(|x| x.created_at)
-                        .unwrap_or(chat.last_message_ts);
+                    let ts = chat.messages.get(0).map(|x| x.created_at);
 
                     let rx = ws_request(WebsocketClientMessageData::GetMessages(GetRequest {
                         chat_id: chat.id,
