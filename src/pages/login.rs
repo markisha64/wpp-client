@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, LoginRequest};
 
-use crate::{components::navbar::Auth, route::Route, USER};
+use crate::{components::navbar::Auth, route::Route, BACKEND_URL, USER};
 
 pub fn Login() -> Element {
     let mut email_signal = use_signal(|| "".to_string());
@@ -78,7 +78,7 @@ pub fn Login() -> Element {
 
                                 async move {
                                     let client = reqwest::Client::new();
-                                    let res = client.post(format!("{}/user/login", env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string())))
+                                    let res = client.post(format!("{}/user/login", BACKEND_URL))
                                         .json(&LoginRequest {
                                             email,
                                             password,

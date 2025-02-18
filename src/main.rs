@@ -33,6 +33,9 @@ mod components;
 mod pages;
 mod route;
 
+pub static BACKEND_URL: &str = "https://wpp-api.grizelj.com.hr";
+pub static BACKEND_URL_WS: &str = "wss://wpp-api.grizelj.com.hr";
+
 fn main() {
     // Init logger
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
@@ -75,15 +78,9 @@ fn App() -> Element {
                 let token = USER().map(|x| x.token);
 
                 if let Some(token) = token {
-                    if let Ok((mut ws, mut wsio)) = WsMeta::connect(
-                        format!(
-                            "{}/ws/?jwt_token={}",
-                            env::var("BACKEND_URL_WS").unwrap_or("localhost:3030".to_string()),
-                            token
-                        ),
-                        None,
-                    )
-                    .await
+                    if let Ok((mut ws, mut wsio)) =
+                        WsMeta::connect(format!("{}/ws/?jwt_token={}", BACKEND_URL_WS, token), None)
+                            .await
                     {
                         let mut evts = ws.observe(ObserveConfig::default()).await.unwrap();
 

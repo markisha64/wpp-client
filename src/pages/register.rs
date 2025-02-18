@@ -96,7 +96,7 @@ pub fn Register() -> Element {
 
                                 async move {
                                     let client = reqwest::Client::new();
-                                    let res = client.post(format!("{}/user/register", env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string())))
+                                    let res = client.post(format!("{}/user/register", BACKEND_URL))
                                         .json(&RegisterRequest{
                                             display_name,
                                             email,
