@@ -5,6 +5,8 @@
 /static/
 /.dioxus/
 node_modules
+wpp-client.tar
+.env
 
 # this file will generate by tailwind:
 /assets/tailwind.css
