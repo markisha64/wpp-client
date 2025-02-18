@@ -77,8 +77,8 @@ fn App() -> Element {
                 if let Some(token) = token {
                     if let Ok((mut ws, mut wsio)) = WsMeta::connect(
                         format!(
-                            "ws://{}/ws/?jwt_token={}",
-                            env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string()),
+                            "{}/ws/?jwt_token={}",
+                            env::var("BACKEND_URL_WS").unwrap_or("localhost:3030".to_string()),
                             token
                         ),
                         None,

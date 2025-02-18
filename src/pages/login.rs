@@ -78,7 +78,7 @@ pub fn Login() -> Element {
 
                                 async move {
                                     let client = reqwest::Client::new();
-                                    let res = client.post(format!("http://{}/user/login", env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string())))
+                                    let res = client.post(format!("{}/user/login", env::var("BACKEND_URL").unwrap_or("localhost:3030".to_string())))
                                         .json(&LoginRequest {
                                             email,
                                             password,
