@@ -231,7 +231,7 @@ pub fn Home() -> Element {
 
                                 if evt.key() == Key::Enter && current_message != "" {
                                     let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
-                                       chat_id: selected_chat_id.unwrap(),
+                                        chat_id: selected_chat_id.unwrap(),
                                         content: current_message
                                     })).await.unwrap();
 
