@@ -59,7 +59,7 @@ pub fn Home() -> Element {
                 r#"
 
                 const elt = document.getElementById("chat-messages")
-                const v = elt.scrollTop <= 16
+                const v = elt.scrollTop
                 const scroll_height = elt.scrollHeight
 
                 dioxus.send(v);
@@ -68,14 +68,21 @@ pub fn Home() -> Element {
                 "#,
             );
 
-            let scroll_top = eval.recv::<bool>().await.unwrap();
+            let scroll_top_v = eval.recv::<f64>().await.unwrap();
             let current_height = eval.recv::<f64>().await.unwrap();
+
+            let scroll_top = scroll_top_v <= 16.0;
+            let scroll_bottom = (current_height - scroll_top_v) < 16.0;
 
             match update_height {
                 UpdateHeight::CheckNeed => {
                     // check if need update
                     if !scroll_top {
                         return;
+                    }
+
+                    if scroll_bottom {
+                        // TODO: update last seen
                     }
 
                     let ts = chat.messages.get(0).map(|x| x.created_at);
