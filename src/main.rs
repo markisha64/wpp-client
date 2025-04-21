@@ -107,9 +107,10 @@ fn App() -> Element {
         )>| async move {
             loop {
                 let mut message_requests: HashMap<Uuid, _> = HashMap::new();
-                let token = USER().map(|x| x.token);
+                let user_o = USER();
+                let token = user_o.map(|x| (x.token, x.claims.user.id));
 
-                if let Some(token) = token {
+                if let Some((token, user_id)) = token {
                     if let Ok((mut ws, mut wsio)) =
                         WsMeta::connect(format!("{}/ws/?jwt_token={}", BACKEND_URL_WS, token), None)
                             .await
@@ -214,6 +215,26 @@ fn App() -> Element {
                                                             .find(|x| x.id == user.id)
                                                         {
                                                             chat.users.push(user.clone())
+                                                        }
+                                                    }
+                                                }
+
+                                                WebsocketServerMessage::SetChatRead {
+                                                    chat_id,
+                                                    last_message_ts,
+                                                } => {
+                                                    let chats = &mut (*CHATS.write());
+                                                    let chat_o =
+                                                        chats.iter_mut().find(|x| x.id == chat_id);
+
+                                                    if let Some(chat) = chat_o {
+                                                        if let Some(chat_user) = chat
+                                                            .users
+                                                            .iter_mut()
+                                                            .find(|x| x.id == user_id)
+                                                        {
+                                                            chat_user.last_message_seen_ts =
+                                                                last_message_ts;
                                                         }
                                                     }
                                                 }
