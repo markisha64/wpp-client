@@ -109,8 +109,7 @@ pub fn Login() -> Element {
                                             .set_item("jwt_token", res.token.as_str())
                                             .map_err(|_| anyhow!("failed to get local storage"))?;
 
-                                        navigator.replace(Route::Home)
-                                            .context("failed navigation")?;
+                                        navigator.replace(Route::Home);
 
                                         Ok(())
                                     }.await;
