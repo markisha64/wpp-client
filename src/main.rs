@@ -31,9 +31,14 @@ mod components;
 mod pages;
 mod route;
 
-// this sucks ass
-pub static BACKEND_URL: &str = "https://wpp-api.grizelj.com.hr";
-pub static BACKEND_URL_WS: &str = "wss://wpp-api.grizelj.com.hr";
+pub static BACKEND_URL: &str = match option_env!("BACKEND_URL") {
+    Some(x) => x,
+    None => "http://localhost:3333",
+};
+pub static BACKEND_URL_WS: &str = match option_env!("BACKEND_URL") {
+    Some(x) => x,
+    None => "ws://localhost:3333",
+};
 
 fn main() {
     // Init logger
