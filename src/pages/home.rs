@@ -173,99 +173,180 @@ pub fn Home() -> Element {
 
     rerender_signal.set(true);
 
+    // rsx! {
+    //     components::sidebar::Sidebar {
+    //         selected_chat_id_signal,
+    //         update_height_signal
+    //     },
+    //     div {
+    //         class: "p-4 sm:ml-40 pb-20 max-h-screen overflow-auto",
+    //         id: "chat-messages",
+    //         onscroll: move |_| {
+    //             update_height_signal.set(UpdateHeight::CheckNeed);
+    //         },
+    //         if let Some(chat) = selected_chat {
+    //             div {
+    //                 class: "p-4 mt-14",
+    //                 ul {
+    //                     for message in chat.messages {
+    //                         li {
+    //                             class: "border-2 border-dashed rounded-lg border-gray-700 m-1 p-1",
+    //                             div {
+    //                                 class: "w-full text-right text-xs",
+    //                                 span {
+    //                                     "{DateTime::<Local>::from(DateTime::<Utc>::from(message.created_at)).format(\"%d/%m/%Y %T\")} "
+    //                                 }
+    //                                 if let Some(creator) = message.creator {
+    //                                     if let Some(name) = chat.users.iter().find(|user| user.id == creator).map(|user| user.display_name.clone()) {
+    //                                         span {
+    //                                             class: "underline",
+    //                                             "{name}"
+    //                                         }
+    //                                     } else {
+    //                                         span {
+    //                                             class: "underline",
+    //                                             "Unknown({creator.to_string()})"
+    //                                         }
+    //                                     }
+    //                                 } else {
+    //                                     span {
+    //                                         class: "underline",
+    //                                         "System"
+
+    //                                     }
+    //                                 }
+    //                             }
+    //                             div {
+    //                                 class: "w-full text-left",
+    //                                 "{message.content}"
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     if selected_chat_id.is_some() {
+    //         div {
+    //             class: "fixed bottom-0 left-0 z-30 w-screen h-16 border-t bg-gray-700 border-gray-600 sm:pl-40 p-2",
+    //             div {
+    //                 input {
+    //                     r#type: "text",
+    //                     id: "message",
+    //                     onkeyup: move |evt: Event<KeyboardData>| {
+    //                         async move {
+    //                             let mut eval = document::eval(
+    //                                 r#"
+
+    //                                 const elt = document.getElementById("message")
+    //                                 dioxus.send(elt.value)
+
+    //                                 "#
+    //                             );
+
+    //                             let current_message = eval.recv::<String>().await.unwrap();
+
+    //                             if evt.key() == Key::Enter && current_message != "" {
+    //                                 let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
+    //                                     chat_id: selected_chat_id.unwrap(),
+    //                                     content: current_message
+    //                                 })).await.unwrap();
+
+    //                                 update_height_signal.set(UpdateHeight::GoDown);
+
+    //                                 let _ = document::eval(
+    //                                     r#"
+
+    //                                     const elt = document.getElementById("message")
+    //                                     elt.value = ""
+
+    //                                     "#
+    //                                 ).await;
+    //                             }
+    //                         }
+    //                     },
+    //                     class: "border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
     rsx! {
-        components::sidebar::Sidebar {
-            selected_chat_id_signal,
-            update_height_signal
-        },
-        div {
-            class: "p-4 sm:ml-40 pb-20 max-h-screen overflow-auto",
-            id: "chat-messages",
-            onscroll: move |_| {
-                update_height_signal.set(UpdateHeight::CheckNeed);
+        main {
+            class: "flex-1 flex flex-col",
+            div {
+                class: "flex items-center justify-between p-4 border-b bg-white",
+                div {
+                    class: "font-bold text-lg",
+                    "Selected chat(id)"
+                }
+                button {
+                    class: "md:hidden px-3 py-1 border rounded text-sm",
+                    onclick: move |_| {
+                        // set show users
+                    }
+                }
             },
             if let Some(chat) = selected_chat {
-                div {
-                    class: "p-4 mt-14",
-                    ul {
-                        for message in chat.messages {
-                            li {
-                                class: "border-2 border-dashed rounded-lg border-gray-700 m-1 p-1",
-                                div {
-                                    class: "w-full text-right text-xs",
-                                    span {
-                                        "{DateTime::<Local>::from(DateTime::<Utc>::from(message.created_at)).format(\"%d/%m/%Y %T\")} "
-                                    }
-                                    if let Some(creator) = message.creator {
-                                        if let Some(name) = chat.users.iter().find(|user| user.id == creator).map(|user| user.display_name.clone()) {
-                                            span {
-                                                class: "underline",
-                                                "{name}"
-                                            }
-                                        } else {
-                                            span {
-                                                class: "underline",
-                                                "Unknown({creator.to_string()})"
-                                            }
-                                        }
-                                    } else {
-                                        span {
-                                            class: "underline",
-                                            "System"
-
-                                        }
-                                    }
-                                }
-                                div {
-                                    class: "w-full text-left",
-                                    "{message.content}"
-                                }
+                for message in chat.messages {
+                    div {
+                        // img {
+                        //     src: "",
+                        //     alt: "user name",
+                        //     class: "w-8 h-8 roudned-full"
+                        // },
+                        div {
+                            div {
+                                class: "font-semibold text-blue-600",
+                                "user name"
+                            }
+                            div {
+                                "{message.content}"
                             }
                         }
                     }
                 }
+                form {
+                    class: "flex gap-2 p-4 border-t bg-white",
+                    input {
+                        class: "flex-1 border rounded px-3 py-2 focus:outline-none focus:ring",
+                        placeholder: "Type a message...",
+                        value: "",
+                        onchange: |_| {},
+                    },
+                    button {
+                        class: "bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700",
+                        r#type: "submit",
+                        "Send"
+                    }
+                }
             }
         }
-        if selected_chat_id.is_some() {
-            div {
-                class: "fixed bottom-0 left-0 z-30 w-screen h-16 border-t bg-gray-700 border-gray-600 sm:pl-40 p-2",
+
+        if let Some(chat) = selected_chat {
+            aside {
+                // translate logic here
+                class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden md:flex translate-x-full",
                 div {
-                    input {
-                        r#type: "text",
-                        id: "message",
-                        onkeyup: move |evt: Event<KeyboardData>| {
-                            async move {
-                                let mut eval = document::eval(
-                                    r#"
-
-                                    const elt = document.getElementById("message")
-                                    dioxus.send(elt.value)
-
-                                    "#
-                                );
-
-                                let current_message = eval.recv::<String>().await.unwrap();
-
-                                if evt.key() == Key::Enter && current_message != "" {
-                                    let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
-                                        chat_id: selected_chat_id.unwrap(),
-                                        content: current_message
-                                    })).await.unwrap();
-
-                                    update_height_signal.set(UpdateHeight::GoDown);
-
-                                    let _ = document::eval(
-                                        r#"
-
-                                        const elt = document.getElementById("message")
-                                        elt.value = ""
-                                        
-                                        "#
-                                    ).await;
-                                }
-                            }
-                        },
-                        class: "border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                    class: "p-4 font-bold text-lg border-b flex justify-between items-center",
+                    "Users",
+                    button {
+                        class: "md:hidden px-2 py-1 border rounded text-xs",
+                        onclick: |_| {},
+                        "×"
+                    }
+                },
+                ul {
+                    class: "flex-1 overflow-y-auto",
+                    for user in chat.users {
+                        // img {
+                        //     src: "",
+                        //     alt: user.display_name,
+                        //     class: "w-8 h-8 rounded-full",
+                        //     "{user.display_name}"
+                        // },
+                        {user.display_name}
                     }
                 }
             }
