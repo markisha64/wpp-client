@@ -51,14 +51,14 @@ pub fn Sidebar(
         document::eval(
             r#"
 
-        let elt = document.getElementById("new-chat-modal")
-        window.onclick = function(event) {
-            if (event.target === elt) {
-                elt.classList.add("hidden")
+            let elt = document.getElementById("new-chat-modal")
+            window.onclick = function(event) {
+                if (event.target === elt) {
+                    elt.classList.add("hidden")
+                }
             }
-        }
                 
-        "#,
+            "#,
         );
     });
 
@@ -265,38 +265,8 @@ pub fn Sidebar(
                     li {
                         class: "px-4 py-3 cursor-pointer hover:bg-blue-50 {cls}",
                         onclick: move |_| {
-                            async move {
-                                let mut eval = document::eval(
-                                    r#"
-
-                                    const elt = document.getElementById("join_code")
-                                    dioxus.send(elt.value)
-
-                                    "#
-                                );
-
-                                let code = eval.recv::<String>().await.unwrap();
-
-                                let id_r = ObjectId::from_str(code.as_str());
-
-                                if let Ok(id) = id_r {
-                                    let join_r = ws_request(WebsocketClientMessageData::JoinChat(id)).await;
-
-                                    let r = join_r
-                                        .map_err(|err| anyhow!(err))
-                                        .and_then(|data| match data {
-                                            Ok(WebsocketServerResData::JoinChat(res)) => Ok(res),
-                                            Ok(_) => Err(anyhow!("unexpected response")),
-                                            Err(e) => Err(anyhow!(e))
-                                        });
-
-                                    if r.is_ok() {
-                                        let _ = document::eval("document.getElementById('new-chat-modal').classList.add('hidden')").await;
-
-                                        let _ = ws_request(WebsocketClientMessageData::GetChats).await;
-                                    }
-                                }
-                            }
+                            update_height_signal.set(UpdateHeight::GoDown);
+                            selected_chat_id_signal.set(Some(id));
                         },
                         "{name}"
                     }
