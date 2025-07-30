@@ -26,6 +26,7 @@ pub fn Home() -> Element {
     )>();
     let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
     let mut rerender_signal = use_signal(|| false);
+    let mut show_users_signal = use_signal(|| true);
 
     let ws_request = move |req| -> oneshot::Receiver<_> {
         let (tx, rx) = oneshot::channel();
@@ -38,6 +39,7 @@ pub fn Home() -> Element {
     // dependant signals
     let selected_chat_id = selected_chat_id_signal();
     let chats = CHATS();
+    let show_users = show_users_signal();
 
     let selected_chat = chats
         .iter()
@@ -172,6 +174,11 @@ pub fn Home() -> Element {
 
     rerender_signal.set(true);
 
+    let translate_su = match show_users {
+        true => "translate-x-0",
+        false => "translate-x-full",
+    };
+
     rsx! {
         div {
             class: "flex h-screen bg-gray-100",
@@ -191,7 +198,11 @@ pub fn Home() -> Element {
                         button {
                             class: "md:hidden px-3 py-1 border rounded text-sm",
                             onclick: move |_| {
-                                // set show users
+                                show_users_signal.set(!show_users);
+                            },
+                            match show_users {
+                                true => "Hide Users",
+                                false => "Show Users"
                             }
                         }
                     },
@@ -286,13 +297,15 @@ pub fn Home() -> Element {
 
                 aside {
                     // translate logic here
-                    class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden md:flex translate-x-full",
+                    class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden md:flex {translate_su}",
                     div {
                         class: "p-4 font-bold text-lg border-b flex justify-between items-center",
                         "Users",
                         button {
                             class: "md:hidden px-2 py-1 border rounded text-xs",
-                            onclick: |_| {},
+                            onclick: move |_| {
+                                show_users_signal.set(false);
+                            },
                             "×"
                         }
                     },
