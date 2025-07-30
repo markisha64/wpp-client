@@ -174,11 +174,6 @@ pub fn Home() -> Element {
 
     rerender_signal.set(true);
 
-    let translate_su = match show_users {
-        true => "translate-x-0",
-        false => "translate-x-full",
-    };
-
     rsx! {
         div {
             class: "flex h-screen bg-gray-100",
@@ -196,7 +191,7 @@ pub fn Home() -> Element {
                             "{chat.name} ({chat.id.to_string()})"
                         }
                         button {
-                            class: "md:hidden px-3 py-1 border rounded text-sm",
+                            class: "lg:hidden px-3 py-1 border rounded text-sm",
                             onclick: move |_| {
                                 show_users_signal.set(!show_users);
                             },
@@ -297,7 +292,7 @@ pub fn Home() -> Element {
 
                 aside {
                     // translate logic here
-                    class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden md:flex {translate_su}",
+                    class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden lg:flex",
                     div {
                         class: "p-4 font-bold text-lg border-b flex justify-between items-center",
                         "Users",
@@ -311,7 +306,7 @@ pub fn Home() -> Element {
                     },
                     ul {
                         class: "flex-1 overflow-y-auto",
-                        for user in chat.users {
+                        for user in chat.users.clone() {
                             li {
                                 class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
                                 // img {
@@ -321,6 +316,47 @@ pub fn Home() -> Element {
                                 //     "{user.display_name}"
                                 // },
                                 {user.display_name}
+                            }
+                        }
+                    }
+                }
+
+                if show_users {
+                    div {
+                        class: "lg:hidden fixed inset-0 z-50",
+                        div {
+                            class: "absolute inset-0 bg-black/50",
+                            onclick: move |_| {
+                                show_users_signal.set(false);
+                            }
+                        },
+                        div {
+                            class: "absolute right-0 top-0 h-full w-64 bg-white border-l shadow-lg transform transition-transform duration-200 ease-in-out",
+                            div {
+                                class: "p-4 font-bold text-lg border-b flex justify-between items-center",
+                                "Users",
+                                button {
+                                    class: "px-2 py-1 border rounded text-xs hover:bg-gray-50",
+                                    onclick: move |_| {
+                                        show_users_signal.set(false);
+                                    },
+                                    "×"
+                                }
+                            },
+                            ul {
+                                class: "flex-1 overflow-y-auto",
+                                for user in chat.users {
+                                    li {
+                                        class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
+                                        // img {
+                                        //     src: "",
+                                        //     alt: user.display_name,
+                                        //     class: "w-8 h-8 rounded-full",
+                                        //     "{user.display_name}"
+                                        // },
+                                        {user.display_name}
+                                    }
+                                }
                             }
                         }
                     }
