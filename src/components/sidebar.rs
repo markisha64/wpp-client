@@ -279,9 +279,7 @@ pub fn Sidebar(
                     li {
                         class: "px-4 py-3 cursor-pointer hover:bg-blue-50",
                         onclick: move |_| {
-                            async move {
-                                let _ = document::eval("document.getElementById('new-chat-modal').classList.remove('hidden')").await;
-                            }
+                            new_modal_signal.set(true);
                         },
                         "Create/Join Chat"
                     }
@@ -314,7 +312,7 @@ pub fn Sidebar(
 
         if new_modal {
             div {
-                class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50",
+                class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50",
                 div {
                     class: "bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4",
                     div {
@@ -328,6 +326,7 @@ pub fn Sidebar(
                             onclick: move |_| {
                                 new_modal_signal.set(false);
                             },
+                            "×"
                         }
                     },
                     div {

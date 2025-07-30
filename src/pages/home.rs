@@ -186,7 +186,7 @@ pub fn Home() -> Element {
                         class: "flex items-center justify-between p-4 border-b bg-white",
                         div {
                             class: "font-bold text-lg",
-                            "{chat.name}({chat.id.to_string()})"
+                            "{chat.name} ({chat.id.to_string()})"
                         }
                         button {
                             class: "md:hidden px-3 py-1 border rounded text-sm",
