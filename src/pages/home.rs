@@ -72,8 +72,8 @@ pub fn Home() -> Element {
                 let scroll_top_v = eval.recv::<f64>().await.unwrap();
                 let current_height = eval.recv::<f64>().await.unwrap();
 
-                let scroll_top = scroll_top_v <= 16.0;
-                let scroll_bottom = (current_height - scroll_top_v) < 16.0;
+                let scroll_top = scroll_top_v <= 1.0;
+                let scroll_bottom = (current_height - scroll_top_v) < 1.0;
 
                 match update_height {
                     UpdateHeight::CheckNeed => {
@@ -196,11 +196,14 @@ pub fn Home() -> Element {
                         }
                     },
                     div {
+                        class: "flex-1 overflow-y-auto p-4 space-y-4",
                         onscroll: move |_| {
                             update_height_signal.set(UpdateHeight::CheckNeed);
                         },
+                        id: "chat-messages",
                         for message in chat.messages {
                             div {
+                                class: "flex items-start gap-3",
                                 // img {
                                 //     src: "",
                                 //     alt: "user name",
