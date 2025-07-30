@@ -173,134 +173,137 @@ pub fn Home() -> Element {
     rerender_signal.set(true);
 
     rsx! {
-        components::sidebar::Sidebar {
-            selected_chat_id_signal,
-            update_height_signal
-        },
-        if let Some(chat) = selected_chat {
-            main {
-                class: "flex-1 flex flex-col",
-                div {
-                    class: "flex items-center justify-between p-4 border-b bg-white",
+        div {
+            class: "flex h-screen bg-gray-100",
+            components::sidebar::Sidebar {
+                selected_chat_id_signal,
+                update_height_signal
+            },
+            if let Some(chat) = selected_chat {
+                main {
+                    class: "flex-1 flex flex-col",
                     div {
-                        class: "font-bold text-lg",
-                        "{chat.name}({chat.id.to_string()})"
-                    }
-                    button {
-                        class: "md:hidden px-3 py-1 border rounded text-sm",
-                        onclick: move |_| {
-                            // set show users
-                        }
-                    }
-                },
-                div {
-                    onscroll: move |_| {
-                        update_height_signal.set(UpdateHeight::CheckNeed);
-                    },
-                    for message in chat.messages {
+                        class: "flex items-center justify-between p-4 border-b bg-white",
                         div {
-                            // img {
-                            //     src: "",
-                            //     alt: "user name",
-                            //     class: "w-8 h-8 roudned-full"
-                            // },
+                            class: "font-bold text-lg",
+                            "{chat.name}({chat.id.to_string()})"
+                        }
+                        button {
+                            class: "md:hidden px-3 py-1 border rounded text-sm",
+                            onclick: move |_| {
+                                // set show users
+                            }
+                        }
+                    },
+                    div {
+                        onscroll: move |_| {
+                            update_height_signal.set(UpdateHeight::CheckNeed);
+                        },
+                        for message in chat.messages {
                             div {
-                                if let Some(creator) = message.creator {
-                                    if let Some(name) = chat.users.iter().find(|user| user.id == creator).map(|user| user.display_name.clone()) {
-                                        div {
-                                            class: "font-semibold text-blue-600",
-                                            "{name}"
+                                // img {
+                                //     src: "",
+                                //     alt: "user name",
+                                //     class: "w-8 h-8 roudned-full"
+                                // },
+                                div {
+                                    if let Some(creator) = message.creator {
+                                        if let Some(name) = chat.users.iter().find(|user| user.id == creator).map(|user| user.display_name.clone()) {
+                                            div {
+                                                class: "font-semibold text-blue-600",
+                                                "{name}"
+                                            }
+                                        } else {
+                                            div {
+                                                class: "font-semibold text-blue-600",
+                                                "Unknown({creator.to_string()})"
+                                            }
                                         }
                                     } else {
                                         div {
-                                            class: "font-semibold text-blue-600",
-                                            "Unknown({creator.to_string()})"
+                                            class: "font-semibold text-blue-600 underline",
+                                            "System"
                                         }
                                     }
-                                } else {
                                     div {
-                                        class: "font-semibold text-blue-600 underline",
-                                        "System"
+                                        "{message.content}"
                                     }
-                                }
-                                div {
-                                    "{message.content}"
                                 }
                             }
                         }
                     }
-                }
-                form {
-                    class: "flex gap-2 p-4 border-t bg-white",
-                    onsubmit: move |_| {
-                        async move {
-                            // get input value
-                            let mut eval = document::eval(
-                                r#"
-
-                                const elt = document.getElementById("message")
-                                dioxus.send(elt.value)
-
-                                "#
-                            );
-
-                            let current_message = eval.recv::<String>().await.unwrap();
-
-                            if current_message != "" {
-                                let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
-                                    chat_id: selected_chat_id.unwrap(),
-                                    content: current_message
-                                })).await.unwrap();
-
-                                update_height_signal.set(UpdateHeight::GoDown);
-
-                                // clear input
-                                let _ = document::eval(
+                    form {
+                        class: "flex gap-2 p-4 border-t bg-white",
+                        onsubmit: move |_| {
+                            async move {
+                                // get input value
+                                let mut eval = document::eval(
                                     r#"
 
                                     const elt = document.getElementById("message")
-                                    elt.value = ""
+                                    dioxus.send(elt.value)
 
                                     "#
-                                ).await;
+                                );
+
+                                let current_message = eval.recv::<String>().await.unwrap();
+
+                                if current_message != "" {
+                                    let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
+                                        chat_id: selected_chat_id.unwrap(),
+                                        content: current_message
+                                    })).await.unwrap();
+
+                                    update_height_signal.set(UpdateHeight::GoDown);
+
+                                    // clear input
+                                    let _ = document::eval(
+                                        r#"
+
+                                        const elt = document.getElementById("message")
+                                        elt.value = ""
+
+                                        "#
+                                    ).await;
+                                }
                             }
+                        },
+                        input {
+                            class: "flex-1 border rounded px-3 py-2 focus:outline-none focus:ring",
+                            placeholder: "Type a message...",
+                            id: "message",
+                        },
+                        button {
+                            class: "bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700",
+                            r#type: "submit",
+                            "Send"
                         }
-                    },
-                    input {
-                        class: "flex-1 border rounded px-3 py-2 focus:outline-none focus:ring",
-                        placeholder: "Type a message...",
-                        id: "message",
-                    },
-                    button {
-                        class: "bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700",
-                        r#type: "submit",
-                        "Send"
                     }
                 }
-            }
 
-            aside {
-                // translate logic here
-                class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden md:flex translate-x-full",
-                div {
-                    class: "p-4 font-bold text-lg border-b flex justify-between items-center",
-                    "Users",
-                    button {
-                        class: "md:hidden px-2 py-1 border rounded text-xs",
-                        onclick: |_| {},
-                        "×"
-                    }
-                },
-                ul {
-                    class: "flex-1 overflow-y-auto",
-                    for user in chat.users {
-                        // img {
-                        //     src: "",
-                        //     alt: user.display_name,
-                        //     class: "w-8 h-8 rounded-full",
-                        //     "{user.display_name}"
-                        // },
-                        {user.display_name}
+                aside {
+                    // translate logic here
+                    class: "w-64 bg-white border-l flex-col transition-transform duration-200 ease-in-out hidden md:flex translate-x-full",
+                    div {
+                        class: "p-4 font-bold text-lg border-b flex justify-between items-center",
+                        "Users",
+                        button {
+                            class: "md:hidden px-2 py-1 border rounded text-xs",
+                            onclick: |_| {},
+                            "×"
+                        }
+                    },
+                    ul {
+                        class: "flex-1 overflow-y-auto",
+                        for user in chat.users {
+                            // img {
+                            //     src: "",
+                            //     alt: user.display_name,
+                            //     class: "w-8 h-8 rounded-full",
+                            //     "{user.display_name}"
+                            // },
+                            {user.display_name}
+                        }
                     }
                 }
             }

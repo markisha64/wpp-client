@@ -271,15 +271,15 @@ pub fn Sidebar(
                         "{name}"
                     }
                 },
+            },
+            div {
+                class: "p-4 border-t flex flex-col items-center gap-2 text-sm text-gray-500",
+                // img {
+                //     class: "w-10 h-10 rounded-full",
+                //     src: "",
+                // },
                 div {
-                    class: "p-4 border-t flex flex-col items-center gap-2 text-sm text-gray-500",
-                    // img {
-                    //     class: "w-10 h-10 rounded-full",
-                    //     src: "",
-                    // },
-                    div {
-                        "Username"
-                    }
+                    "Username"
                 }
             }
         }
