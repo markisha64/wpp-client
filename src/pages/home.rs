@@ -312,13 +312,16 @@ pub fn Home() -> Element {
                     ul {
                         class: "flex-1 overflow-y-auto",
                         for user in chat.users {
-                            // img {
-                            //     src: "",
-                            //     alt: user.display_name,
-                            //     class: "w-8 h-8 rounded-full",
-                            //     "{user.display_name}"
-                            // },
-                            {user.display_name}
+                            li {
+                                class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
+                                // img {
+                                //     src: "",
+                                //     alt: user.display_name,
+                                //     class: "w-8 h-8 rounded-full",
+                                //     "{user.display_name}"
+                                // },
+                                {user.display_name}
+                            }
                         }
                     }
                 }
