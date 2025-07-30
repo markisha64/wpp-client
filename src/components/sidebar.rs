@@ -9,13 +9,14 @@ use shared::api::{
 };
 use tokio::sync::oneshot;
 
-use crate::{pages::home::UpdateHeight, CHATS, USER};
+use crate::{pages::home::UpdateHeight, route::Route, CHATS, USER};
 
 #[component]
 pub fn Sidebar(
     selected_chat_id_signal: Signal<Option<ObjectId>>,
     update_height_signal: Signal<UpdateHeight>,
 ) -> Element {
+    let mut new_modal_signal = use_signal(|| false);
     let selected_chat_id = selected_chat_id_signal();
     let chats = CHATS();
     let user = USER();
@@ -252,6 +253,9 @@ pub fn Sidebar(
     //     }
     // }
 
+    let logged_in = user.is_some();
+    let new_modal = new_modal_signal();
+
     rsx! {
         aside {
             class: "w-64 bg-white border-r flex flex-col",
@@ -271,15 +275,204 @@ pub fn Sidebar(
                         "{name}"
                     }
                 },
+                if logged_in {
+                    li {
+                        class: "px-4 py-3 cursor-pointer hover:bg-blue-50",
+                        onclick: move |_| {
+                            async move {
+                                let _ = document::eval("document.getElementById('new-chat-modal').classList.remove('hidden')").await;
+                            }
+                        },
+                        "Create/Join Chat"
+                    }
+                }
             },
             div {
                 class: "p-4 border-t flex flex-col items-center gap-2 text-sm text-gray-500",
-                // img {
-                //     class: "w-10 h-10 rounded-full",
-                //     src: "",
-                // },
+                if let Some(user) = user {
+                    // img {
+                    //     class: "w-10 h-10 rounded-full",
+                    //     src: "",
+                    // },
+                    div {
+                        "{user.claims.user.display_name}"
+                    }
+                } else {
+                    div {
+                        class: "flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse",
+                        button {
+                            r#type: "button",
+                            class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800",
+                            Link {
+                                to: Route::Login {}, "Login"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        if new_modal {
+            div {
+                class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50",
                 div {
-                    "Username"
+                    class: "bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4",
+                    div {
+                        class: "flex items-center justify-between p-6 border-b",
+                        h2 {
+                            class: "text-xl font-bold",
+                            "New Chat"
+                        },
+                        button {
+                            class: "text-gray-500 hover:text-gray-700 text-2xl",
+                            onclick: move |_| {
+                                new_modal_signal.set(false);
+                            },
+                        }
+                    },
+                    div {
+                        class: "flex",
+                        div {
+                            class: "flex-1 p-6 border-r",
+                            h3 {
+                                class: "text-lg font-semibold mb-4",
+                                "Create New Chat"
+                            }
+                            form {
+                                class: "space-y-4",
+                                onsubmit: move |_| {
+                                    async move {
+                                        let mut eval = document::eval(
+                                            r#"
+
+                                            const elt = document.getElementById("chatName")
+                                            dioxus.send(elt.value)
+
+                                            "#
+                                        );
+
+                                        let current_name = eval.recv::<String>().await.unwrap();
+
+                                        if current_name.len() > 0 {
+                                            let new_chat_r = ws_request(WebsocketClientMessageData::CreateChat(CreateRequest {
+                                                name: current_name
+                                            })).await;
+
+                                            let new_chat = new_chat_r
+                                                .map_err(|err| anyhow!(err))
+                                                .and_then(|data| match data {
+                                                    Ok(WebsocketServerResData::CreateChat(chat)) => Ok(chat),
+                                                    Ok(_) => Err(anyhow!("unexpected response")),
+                                                    Err(e) => Err(anyhow!(e))
+                                                });
+
+                                            if let Ok(chat) = new_chat {
+                                                let chat_id = chat.id;
+                                                // borrow both here to avoid race conditions
+                                                let chats = &mut (*CHATS.write());
+
+                                                let selected_chat_id = &mut (*selected_chat_id_signal.write());
+
+                                                *selected_chat_id = Some(chat_id);
+
+                                                chats.push(chat);
+                                                chats.sort_by(|a, b| {
+                                                    a.last_message_ts
+                                                        .cmp(&b.last_message_ts)
+                                                        .reverse()
+                                                });
+
+                                                new_modal_signal.set(false);
+                                            }
+                                        }
+                                    }
+                                },
+                                div {
+                                    label {
+                                        r#for: "chatName",
+                                        class: "block text-sm font-medium text-gray-700 mb-2",
+                                        "Chat Name"
+                                    }
+                                    input {
+                                        id: "chatName",
+                                        r#type: "text",
+                                        class: "w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500",
+                                        placeholder: "Enter chat name...",
+                                        required: "true"
+                                    }
+                                },
+                                button {
+                                    r#type: "submit",
+                                    class: "w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors",
+                                    "Create Chat"
+                                }
+                            }
+                        },
+
+                        div {
+                            class: "flex-1 p-6",
+                            h3 {
+                                class: "text-lg font-semibold mb-4",
+                                "Join Existing Chat"
+                            },
+                            form {
+                                onsubmit: move |_| {
+                                    async move {
+                                        let mut eval = document::eval(
+                                            r#"
+
+                                            const elt = document.getElementById("chatCode")
+                                            dioxus.send(elt.value)
+
+                                            "#
+                                        );
+
+                                        let code = eval.recv::<String>().await.unwrap();
+
+                                        let id_r = ObjectId::from_str(code.as_str());
+
+                                        if let Ok(id) = id_r {
+                                            let join_r = ws_request(WebsocketClientMessageData::JoinChat(id)).await;
+
+                                            let r = join_r
+                                                .map_err(|err| anyhow!(err))
+                                                .and_then(|data| match data {
+                                                    Ok(WebsocketServerResData::JoinChat(res)) => Ok(res),
+                                                    Ok(_) => Err(anyhow!("unexpected response")),
+                                                    Err(e) => Err(anyhow!(e))
+                                                });
+
+                                            if r.is_ok() {
+                                                new_modal_signal.set(false);
+
+                                                let _ = ws_request(WebsocketClientMessageData::GetChats).await;
+                                            }
+                                        }
+                                    }
+                                },
+                                class: "space-y-4",
+                                div {
+                                    label {
+                                        r#for: "chatCode",
+                                        class: "block text-sm font-medium text-gray-700 mb-2",
+                                        "Chat Code"
+                                    },
+                                    input {
+                                        id: "chatCode",
+                                        r#type: "text",
+                                        class: "w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500",
+                                        placeholder: "Enter chat code...",
+                                        required: "true"
+                                    }
+                                },
+                                button {
+                                    r#type: "submit",
+                                    class: "w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors",
+                                    "Join Chat"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
