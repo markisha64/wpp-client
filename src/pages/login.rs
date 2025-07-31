@@ -8,15 +8,14 @@ use crate::{components::navbar::Auth, route::Route, BACKEND_URL, USER};
 pub fn Login() -> Element {
     let mut email_signal = use_signal(|| "".to_string());
     let mut password_signal = use_signal(|| "".to_string());
+    let mut error_signal = use_signal(|| Option::<String>::None);
 
     let email = email_signal();
     let password = password_signal();
-
-    let mut error_signal = use_signal(|| Option::<String>::None);
+    let error = error_signal();
 
     let is_logged_in = USER().is_some();
     let navigator = use_navigator();
-    let error = error_signal();
 
     use_effect(move || {
         if is_logged_in {
