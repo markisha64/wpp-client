@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::navbar::NavBar, pages::home::Home, pages::login::Login, pages::register::Register,
+    components::navbar::NavBar, pages::home::Home, pages::login::Login, pages::profile::Profile,
+    pages::register::Register,
 };
 
 #[derive(Clone, Routable, Debug, PartialEq)]
@@ -14,5 +15,7 @@ pub enum Route {
     Login,
     #[route("/register")]
     Register,
+    #[route("/profile")]
+    Profile,
 
 }

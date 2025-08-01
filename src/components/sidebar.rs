@@ -103,7 +103,10 @@ pub fn Sidebar(
                     //     src: "",
                     // },
                     div {
-                        "{user.claims.user.display_name}"
+                        Link {
+                            to: Route::Profile,
+                            "{user.claims.user.display_name}"
+                        }
                     }
                 } else {
                     div {
