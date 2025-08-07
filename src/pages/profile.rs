@@ -1,18 +1,34 @@
-use crate::{route::Route, BACKEND_URL};
+use crate::{route::Route, BACKEND_URL, USER};
 use dioxus::prelude::*;
+use reqwest::header::{HeaderMap, HeaderValue};
 use shared::api::user::UpdateRequest;
 
 pub fn Profile() -> Element {
+    let user = USER();
+    let navigator = use_navigator();
+
+    use_effect(move || {
+        if USER().is_none() {
+            navigator.replace(Route::Login);
+        }
+    });
+
+    let (user, token) = match user {
+        Some(u) => (u.claims.user, u.token),
+        None => return rsx! {},
+    };
+
     let mut message_signal = use_signal(|| Option::<(String, bool)>::None);
     let mut is_loading_signal = use_signal(|| false);
 
-    let mut display_name_signal = use_signal(|| String::new());
+    let mut display_name_signal = use_signal(|| user.display_name);
     let mut profile_image_signal = use_signal(|| String::new());
 
     let message = message_signal();
     let is_loading = is_loading_signal();
 
     let display_name = display_name_signal();
+    let display_name_m = display_name.clone();
     let profile_image = profile_image_signal();
 
     rsx! {
@@ -44,7 +60,7 @@ pub fn Profile() -> Element {
                     class: "bg-white rounded-lg shadow-md p-6",
                     form {
                         onsubmit: move |_| {
-                            to_owned![display_name];
+                            to_owned![display_name_m, token];
 
                             is_loading_signal.set(true);
                             message_signal.set(None);
@@ -52,10 +68,16 @@ pub fn Profile() -> Element {
                             spawn(async move {
                                 let task: Result<(), anyhow::Error> = async move {
                                     let client = reqwest::Client::new();
-                                    client.post(format!("{}/user/update", BACKEND_URL))
+
+                                    let mut headers = HeaderMap::new();
+                                    headers.insert("Authorization", HeaderValue::from_str(format!("Bearer {}", token).as_str()).unwrap());
+
+                                    client.patch(format!("{}/user/update", BACKEND_URL))
                                         .json(&UpdateRequest {
-                                            display_name,
+                                            display_name: Some(display_name_m),
+                                            profile_image: None
                                         })
+                                        // .headers(headers)
                                         .send()
                                         .await?
                                         .error_for_status()?;
@@ -148,6 +170,7 @@ pub fn Profile() -> Element {
                                 input {
                                     r#type: "text",
                                     id: "display-name",
+                                    value: display_name,
                                     onchange: move |evt| {
                                         display_name_signal.set(evt.value());
                                     },
@@ -234,7 +257,7 @@ pub fn Profile() -> Element {
                                     },
                                     p {
                                         class: "text-sm text-gray-600",
-                                        "alice@example.com"
+                                        "{user.email}"
                                     }
                                 }
                             }
