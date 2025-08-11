@@ -35,7 +35,7 @@ pub static BACKEND_URL: &str = match option_env!("BACKEND_URL") {
     Some(x) => x,
     None => "http://localhost:3030",
 };
-pub static BACKEND_URL_WS: &str = match option_env!("BACKEND_URL") {
+pub static BACKEND_URL_WS: &str = match option_env!("BACKEND_URL_WS") {
     Some(x) => x,
     None => "ws://localhost:3030",
 };
