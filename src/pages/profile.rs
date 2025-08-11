@@ -1,20 +1,36 @@
-use crate::{route::Route, BACKEND_URL, USER};
+use crate::{route::Route, CLAIMS, USER};
+use anyhow::anyhow;
 use dioxus::prelude::*;
-use reqwest::header::{HeaderMap, HeaderValue};
-use shared::api::user::UpdateRequest;
+use shared::api::{
+    user::UpdateRequest,
+    websocket::{WebsocketClientMessageData, WebsocketServerResData},
+};
+use tokio::sync::oneshot;
 
 pub fn Profile() -> Element {
     let user = USER();
     let navigator = use_navigator();
+    let ws_channel = use_coroutine_handle::<(
+        WebsocketClientMessageData,
+        oneshot::Sender<Result<WebsocketServerResData, String>>,
+    )>();
+
+    let ws_request = move |req| -> oneshot::Receiver<_> {
+        let (tx, rx) = oneshot::channel();
+
+        ws_channel.send((req, tx));
+
+        rx
+    };
 
     use_effect(move || {
-        if USER().is_none() {
+        if CLAIMS().is_none() {
             navigator.replace(Route::Login);
         }
     });
 
-    let (user, token) = match user {
-        Some(u) => (u.claims.user, u.token),
+    let user = match user {
+        Some(u) => u,
         None => return rsx! {},
     };
 
@@ -60,27 +76,18 @@ pub fn Profile() -> Element {
                     class: "bg-white rounded-lg shadow-md p-6",
                     form {
                         onsubmit: move |_| {
-                            to_owned![display_name_m, token];
+                            to_owned![display_name_m];
 
                             is_loading_signal.set(true);
                             message_signal.set(None);
 
                             spawn(async move {
                                 let task: Result<(), anyhow::Error> = async move {
-                                    let client = reqwest::Client::new();
-
-                                    let mut headers = HeaderMap::new();
-                                    headers.insert("Authorization", HeaderValue::from_str(format!("Bearer {}", token).as_str()).unwrap());
-
-                                    client.patch(format!("{}/user/update", BACKEND_URL))
-                                        .json(&UpdateRequest {
-                                            display_name: Some(display_name_m),
-                                            profile_image: None
-                                        })
-                                        // .headers(headers)
-                                        .send()
-                                        .await?
-                                        .error_for_status()?;
+                                    ws_request(WebsocketClientMessageData::ProfileUpdate(UpdateRequest {
+                                        display_name: Some(display_name_m),
+                                        profile_image: None
+                                    })).await?
+                                    .map_err(|e| anyhow!(e));
 
                                     Ok(())
                                 }.await;

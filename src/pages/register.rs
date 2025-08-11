@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, RegisterRequest};
 
-use crate::{components::navbar::Auth, route::Route, BACKEND_URL, USER};
+use crate::{components::navbar::Auth, route::Route, BACKEND_URL, CLAIMS};
 
 pub fn Register() -> Element {
     let mut email_signal = use_signal(|| "".to_string());
@@ -16,7 +16,7 @@ pub fn Register() -> Element {
     let display_name = display_name_signal();
     let error = error_signal();
 
-    let is_logged_in = USER().is_some();
+    let is_logged_in = CLAIMS().is_some();
     let navigator = use_navigator();
 
     use_effect(move || {
@@ -60,7 +60,7 @@ pub fn Register() -> Element {
                                 let key = DecodingKey::from_secret(&[]);
                                 let payload = jsonwebtoken::decode::<Claims>(res.token.as_str(), &key, &validation).unwrap();
 
-                                *USER.write() = Some(Auth {
+                                *CLAIMS.write() = Some(Auth {
                                     claims: payload.claims,
                                     token: res.token.clone(),
                                 });

@@ -6,6 +6,7 @@ use dioxus_logger::tracing::{info, Level};
 use route::Route;
 
 use gloo_timers::future::TimeoutFuture;
+use shared::models::user::UserSafe;
 use std::collections::HashMap;
 
 use chrono::Utc;
@@ -47,7 +48,8 @@ fn main() {
     launch(App);
 }
 
-pub static USER: GlobalSignal<Option<Auth>> = Signal::global(|| {
+pub static USER: GlobalSignal<Option<UserSafe>> = Signal::global(|| None);
+pub static CLAIMS: GlobalSignal<Option<Auth>> = Signal::global(|| {
     let storage = web_sys::window()?.local_storage().ok()??;
     let jwt_token = storage.get_item("jwt_token").ok()??;
 
@@ -106,14 +108,14 @@ fn App() -> Element {
     });
 
     use_coroutine(
-        move |mut rx: UnboundedReceiver<(
+        move |mut ws_channel: UnboundedReceiver<(
             WebsocketClientMessageData,
             oneshot::Sender<Result<WebsocketServerResData, String>>,
         )>| async move {
             loop {
                 let mut message_requests: HashMap<Uuid, _> = HashMap::new();
-                let user_o = USER();
-                let token = user_o.map(|x| (x.token, x.claims.user.id));
+                let user_o = CLAIMS();
+                let token = user_o.map(|x| (x.token, x.claims.user_id));
 
                 if let Some((token, user_id)) = token {
                     if let Ok((mut ws, mut wsio)) =
@@ -133,8 +135,19 @@ fn App() -> Element {
                         .await
                         .unwrap();
 
+                        let get_self_request_id = Uuid::new_v4();
+                        wsio.send(WsMessage::Text(
+                            serde_json::to_string(&WebsocketClientMessage {
+                                id: get_self_request_id,
+                                data: WebsocketClientMessageData::GetSelf,
+                            })
+                            .unwrap(),
+                        ))
+                        .await
+                        .unwrap();
+
                         loop {
-                            let rrx = rx.next();
+                            let rrx = ws_channel.next();
                             let evtx = select(evts.next(), wsio.next());
 
                             match select(rrx, evtx).await {
@@ -174,6 +187,10 @@ fn App() -> Element {
                                                 } => match data {
                                                     Ok(WebsocketServerResData::GetChats(chats)) => {
                                                         *CHATS.write() = chats.clone();
+                                                    }
+
+                                                    Ok(WebsocketServerResData::GetSelf(user)) => {
+                                                        USER.write().replace(user);
                                                     }
 
                                                     result => {
@@ -242,6 +259,10 @@ fn App() -> Element {
                                                                 last_message_ts;
                                                         }
                                                     }
+                                                }
+
+                                                WebsocketServerMessage::ProfileUpdated(user) => {
+                                                    USER.write().replace(user);
                                                 }
 
                                                 _ => todo!("mediasoup"),

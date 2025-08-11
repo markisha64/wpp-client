@@ -8,7 +8,7 @@ use shared::api::{
     websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
 
-use crate::{components, CHATS, USER};
+use crate::{components, CHATS, CLAIMS, USER};
 
 #[derive(Clone)]
 pub enum UpdateHeight {
@@ -49,7 +49,7 @@ pub fn Home() -> Element {
     let _ = use_resource(move || async move {
         // dependant signals
         let chats = CHATS();
-        let user_o = USER().map(|x| x.claims.user);
+        let user_o = USER();
         let selected_chat_id = selected_chat_id_signal();
         let update_height = update_height_signal();
         let rerender = rerender_signal();

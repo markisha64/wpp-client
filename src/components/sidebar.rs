@@ -9,7 +9,7 @@ use shared::api::{
 };
 use tokio::sync::oneshot;
 
-use crate::{pages::home::UpdateHeight, route::Route, CHATS, USER};
+use crate::{pages::home::UpdateHeight, route::Route, CHATS, CLAIMS, USER};
 
 #[component]
 pub fn Sidebar(
@@ -19,6 +19,7 @@ pub fn Sidebar(
     let mut new_modal_signal = use_signal(|| false);
     let selected_chat_id = selected_chat_id_signal();
     let chats = CHATS();
+    let claims = CLAIMS();
     let user = USER();
 
     let ws_channel = use_coroutine_handle::<(
@@ -63,7 +64,7 @@ pub fn Sidebar(
         );
     });
 
-    let logged_in = user.is_some();
+    let logged_in = claims.is_some();
     let new_modal = new_modal_signal();
 
     rsx! {
@@ -97,7 +98,7 @@ pub fn Sidebar(
             },
             div {
                 class: "p-4 border-t flex flex-col items-center gap-2 text-sm text-gray-500",
-                if let Some(user) = user {
+                if let Some((_, user)) = claims.zip(user) {
                     // img {
                     //     class: "w-10 h-10 rounded-full",
                     //     src: "",
@@ -105,7 +106,7 @@ pub fn Sidebar(
                     div {
                         Link {
                             to: Route::Profile,
-                            "{user.claims.user.display_name}"
+                            "{user.display_name}"
                         }
                     }
                 } else {
