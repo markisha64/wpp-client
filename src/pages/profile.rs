@@ -1,6 +1,7 @@
 use crate::{route::Route, CLAIMS, USER};
 use anyhow::anyhow;
-use dioxus::prelude::*;
+use base64::{engine::general_purpose, Engine as _};
+use dioxus::{document::eval, prelude::*};
 use shared::api::{
     user::UpdateRequest,
     websocket::{WebsocketClientMessageData, WebsocketServerResData},
@@ -38,7 +39,7 @@ pub fn Profile() -> Element {
     let mut is_loading_signal = use_signal(|| false);
 
     let mut display_name_signal = use_signal(|| user.display_name);
-    let mut profile_image_signal = use_signal(|| String::new());
+    let mut profile_image_signal = use_signal(|| user.profile_image);
 
     let message = message_signal();
     let is_loading = is_loading_signal();
@@ -87,7 +88,7 @@ pub fn Profile() -> Element {
                                         display_name: Some(display_name_m),
                                         profile_image: None
                                     })).await?
-                                    .map_err(|e| anyhow!(e));
+                                    .map_err(|e| anyhow!(e))?;
 
                                     Ok(())
                                 }.await;
@@ -111,13 +112,22 @@ pub fn Profile() -> Element {
                                     class: "relative",
                                     div {
                                         class: "w-24 h-24 rounded-full overflow-hidden bg-gray-200",
-                                        // img {
-                                        //     src
-                                        // }
+                                        img {
+                                            src: profile_image,
+                                            alt: "Profile",
+                                            width: 96,
+                                            height: 96,
+                                            class: "w-full h-full object-cover"
+                                        }
                                     }
                                     button {
                                         r#type: "button",
-                                        onclick: |_| {},
+                                        onclick: |_| {
+                                            eval(r"
+                                                let e = document.getElementById('profile-image-input');    
+                                                e.click();
+                                            ");
+                                        },
                                         class: "absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 transition-colors",
                                         svg {
                                             class: "w-4 h-4",
@@ -148,14 +158,34 @@ pub fn Profile() -> Element {
                                     }
                                     button {
                                         r#type: "button",
-                                        onclick: |_| {},
+                                        onclick: |_| {
+                                            eval(r"
+                                                let e = document.getElementById('profile-image-input');    
+                                                e.click();
+                                            ");
+                                        },
                                         class: "text-blue-600 hover:text-blue-800 font-medium text-sm",
                                         "Choose Image"
                                     }
                                     input {
                                         r#type: "file",
                                         accept: "image/*",
-                                        onchange: |_| {},
+                                        id: "profile-image-input",
+                                        onchange: move |evt| {
+                                            async move {
+                                                if let Some(file_engine) = &evt.files() {
+                                                    let files = file_engine.files();
+
+                                                    let data_o = file_engine.read_file(files[0].as_str()).await;
+
+                                                    if let Some(data) = data_o {
+                                                        let encoded = general_purpose::STANDARD.encode(data);
+
+                                                        *profile_image_signal.write() = format!("data:image;base64,{}", encoded);
+                                                    }
+                                                }
+                                            }
+                                        },
                                         class: "hidden"
                                     }
                                 }
