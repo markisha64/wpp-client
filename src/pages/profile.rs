@@ -315,26 +315,26 @@ pub fn Profile() -> Element {
                             }
                         }
                     }
+                }
 
+                div {
+                    class: "mt-6 bg-white rounded-lg shadow-md p-6",
+                    h2 {
+                        class: "text-xl font-semibold mb-4",
+                        "Account Details"
+                    }
                     div {
-                        class: "mt-6 bg-white rounded-lg shadow-md p-6",
-                        h2 {
-                            class: "text-xl font-semibold mb-4",
-                            "Account Details"
-                        }
+                        class: "space-y-4",
                         div {
-                            class: "space-y-4",
+                            class: "flex items-center justify-between py-3 border-b",
                             div {
-                                class: "flex items-center justify-between py-3 border-b",
-                                div {
-                                    h3 {
-                                        class: "font-medium",
-                                        "Email"
-                                    },
-                                    p {
-                                        class: "text-sm text-gray-600",
-                                        "{user.email}"
-                                    }
+                                h3 {
+                                    class: "font-medium",
+                                    "Email"
+                                },
+                                p {
+                                    class: "text-sm text-gray-600",
+                                    "{user.email}"
                                 }
                             }
                         }

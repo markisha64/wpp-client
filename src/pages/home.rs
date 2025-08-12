@@ -210,30 +210,40 @@ pub fn Home() -> Element {
                         for message in chat.messages {
                             div {
                                 class: "flex items-start gap-3",
-                                // img {
-                                //     src: "",
-                                //     alt: "user name",
-                                //     class: "w-8 h-8 roudned-full"
-                                // },
-                                div {
-                                    if let Some(creator) = message.creator {
-                                        if let Some(name) = chat.users.iter().find(|user| user.id == creator).map(|user| user.display_name.clone()) {
-                                            div {
-                                                class: "font-semibold text-blue-600",
-                                                "{name}"
-                                            }
-                                        } else {
-                                            div {
-                                                class: "font-semibold text-blue-600",
-                                                "Unknown({creator.to_string()})"
-                                            }
+                                if let Some(creator) = message.creator {
+                                    if let Some(chat_user) = chat.users.iter().find(|user| user.id == creator) {
+                                        img {
+                                            src: chat_user.profile_image.clone(),
+                                            alt: chat_user.display_name.clone(),
+                                            class: "w-8 h-8 rounded-full"
+                                        },
+                                        div {
+                                            class: "font-semibold text-blue-600",
+                                            "{chat_user.display_name}"
                                         }
                                     } else {
+                                        img {
+                                            src: "",
+                                            alt: creator.to_string(),
+                                            class: "w-8 h-8 rounded-full"
+                                        },
                                         div {
-                                            class: "font-semibold text-blue-600 underline",
-                                            "System"
+                                            class: "font-semibold text-blue-600",
+                                            "Unknown({creator.to_string()})"
                                         }
                                     }
+                                } else {
+                                    img {
+                                        src: "",
+                                        alt: "System",
+                                        class: "w-8 h-8 rounded-full"
+                                    },
+                                    div {
+                                        class: "font-semibold text-blue-600 underline",
+                                        "System"
+                                    }
+                                }
+                                div {
                                     div {
                                         "{message.content}"
                                     }
@@ -306,16 +316,16 @@ pub fn Home() -> Element {
                     },
                     ul {
                         class: "flex-1 overflow-y-auto",
-                        for user in chat.users.clone() {
+                        for user in &chat.users {
                             li {
                                 class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
-                                // img {
-                                //     src: "",
-                                //     alt: user.display_name,
-                                //     class: "w-8 h-8 rounded-full",
-                                //     "{user.display_name}"
-                                // },
-                                {user.display_name}
+                                img {
+                                    src: user.profile_image.clone(),
+                                    alt: user.display_name.clone(),
+                                    class: "w-8 h-8 rounded-full",
+                                    "{user.display_name.clone()}"
+                                },
+                                {user.display_name.clone()}
                             }
                         }
                     }
@@ -345,16 +355,16 @@ pub fn Home() -> Element {
                             },
                             ul {
                                 class: "flex-1 overflow-y-auto",
-                                for user in chat.users {
+                                for user in &chat.users {
                                     li {
                                         class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
-                                        // img {
-                                        //     src: "",
-                                        //     alt: user.display_name,
-                                        //     class: "w-8 h-8 rounded-full",
-                                        //     "{user.display_name}"
-                                        // },
-                                        {user.display_name}
+                                        img {
+                                            src: user.profile_image.clone(),
+                                            alt: user.display_name.clone(),
+                                            class: "w-8 h-8 rounded-full",
+                                            "{user.display_name.clone()}"
+                                        },
+                                        {user.display_name.clone()}
                                     }
                                 }
                             }
