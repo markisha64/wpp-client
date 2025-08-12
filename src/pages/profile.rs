@@ -1,8 +1,13 @@
-use crate::{route::Route, CLAIMS, USER};
+use crate::{route::Route, BACKEND_URL, CLAIMS, USER};
 use anyhow::anyhow;
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::{document::eval, prelude::*};
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    multipart,
+};
 use shared::api::{
+    media::UploadFileResponse,
     user::UpdateRequest,
     websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
@@ -30,8 +35,8 @@ pub fn Profile() -> Element {
         }
     });
 
-    let user = match user {
-        Some(u) => u,
+    let (user, token) = match user.zip(CLAIMS()) {
+        Some((u, a)) => (u, a.token),
         None => return rsx! {},
     };
 
@@ -39,14 +44,15 @@ pub fn Profile() -> Element {
     let mut is_loading_signal = use_signal(|| false);
 
     let mut display_name_signal = use_signal(|| user.display_name);
-    let mut profile_image_signal = use_signal(|| user.profile_image);
+    let mut profile_image_signal = use_signal(|| (user.profile_image, false, String::new()));
 
     let message = message_signal();
     let is_loading = is_loading_signal();
 
     let display_name = display_name_signal();
     let display_name_m = display_name.clone();
-    let profile_image = profile_image_signal();
+    let (profile_image, profile_image_changed, file_name) = profile_image_signal();
+    let profile_image_m = profile_image.clone();
 
     rsx! {
         div {
@@ -77,18 +83,51 @@ pub fn Profile() -> Element {
                     class: "bg-white rounded-lg shadow-md p-6",
                     form {
                         onsubmit: move |_| {
-                            to_owned![display_name_m];
+                            to_owned![display_name_m, profile_image_m, token, file_name];
 
                             is_loading_signal.set(true);
                             message_signal.set(None);
 
                             spawn(async move {
                                 let task: Result<(), anyhow::Error> = async move {
-                                    ws_request(WebsocketClientMessageData::ProfileUpdate(UpdateRequest {
+                                    let mut request = UpdateRequest {
                                         display_name: Some(display_name_m),
                                         profile_image: None
-                                    })).await?
-                                    .map_err(|e| anyhow!(e))?;
+                                    };
+
+                                    if profile_image_changed {
+                                        let data_o = profile_image_m.strip_prefix("data:image;base64,");
+
+                                        let data = data_o.map(|x| general_purpose::STANDARD.decode(x))
+                                            .ok_or(anyhow!("failed to get data"))??;
+
+                                        let file_part = multipart::Part::bytes(data).file_name(file_name);
+
+                                        let form = multipart::Form::new()
+                                            .part("file", file_part);
+
+                                        let mut headers = HeaderMap::new();
+
+                                        headers.insert(HeaderName::from_static("authorization"), HeaderValue::from_str(format!("Bearer {}", token).as_str())?);
+
+                                        let client = reqwest::Client::new();
+                                        let res = client.post(format!("{}/media/upload", BACKEND_URL))
+                                            .multipart(form)
+                                            .headers(headers)
+                                            .send()
+                                            .await?
+                                            .error_for_status()?
+                                            .json::<UploadFileResponse>()
+                                            .await?;
+
+                                        let url = format!("{}{}", BACKEND_URL, res.path);
+
+                                        *profile_image_signal.write() = (url.clone(), false, String::new());
+                                        request.profile_image = Some(url);
+                                    }
+
+                                    ws_request(WebsocketClientMessageData::ProfileUpdate(request)).await?
+                                        .map_err(|e| anyhow!(e))?;
 
                                     Ok(())
                                 }.await;
@@ -181,7 +220,7 @@ pub fn Profile() -> Element {
                                                     if let Some(data) = data_o {
                                                         let encoded = general_purpose::STANDARD.encode(data);
 
-                                                        *profile_image_signal.write() = format!("data:image;base64,{}", encoded);
+                                                        *profile_image_signal.write() = (format!("data:image;base64,{}", encoded), true, files[0].clone());
                                                     }
                                                 }
                                             }

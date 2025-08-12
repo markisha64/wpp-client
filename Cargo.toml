@@ -16,7 +16,7 @@ shared = { git = "https://github.com/markisha64/wpp-server" }
 getrandom = { version = "0.2.15", features = ["js"] }
 uuid = { version = "1.13.1", features = ["js"] }
 manganis = "0.6.2"
-reqwest = { version = "0.12.12", features = ["json"] }
+reqwest = { version = "0.12.12", features = ["json", "multipart"] }
 jsonwebtoken = "9.3.1"
 web-sys = { version = "0.3.77", features = ["Storage"] }
 chrono = "0.4.39"
