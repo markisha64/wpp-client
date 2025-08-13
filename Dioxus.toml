@@ -34,7 +34,9 @@ watch_path = ["src", "assets"]
 style = ["/assets/tailwind.css"]
 
 # Javascript code file
-script = []
+script = [
+  "/assets/mediasoup-client.bundle.js"
+]
 
 [web.resource.dev]
 
