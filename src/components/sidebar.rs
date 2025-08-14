@@ -9,7 +9,7 @@ use shared::api::{
 };
 use tokio::sync::oneshot;
 
-use crate::{pages::home::UpdateHeight, route::Route, CHATS, CLAIMS, USER};
+use crate::{components, pages::home::UpdateHeight, route::Route, CHATS, CLAIMS, USER};
 
 #[component]
 pub fn Sidebar(
@@ -99,10 +99,11 @@ pub fn Sidebar(
             div {
                 class: "p-4 border-t flex flex-col items-center gap-2 text-sm text-gray-500",
                 if let Some((_, user)) = claims.zip(user) {
-                    img {
-                        class: "w-10 h-10 rounded-full",
-                        src: user.profile_image,
-                    },
+                    components::avatar::Avatar {
+                        src: Some(user.profile_image.clone()),
+                        alt: user.display_name.clone(),
+                        size: components::avatar::Size::Medium,
+                    }
                     div {
                         "{user.display_name}"
                     }

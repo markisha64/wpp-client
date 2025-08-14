@@ -212,32 +212,32 @@ pub fn Home() -> Element {
                                 class: "flex items-start gap-3",
                                 if let Some(creator) = message.creator {
                                     if let Some(chat_user) = chat.users.iter().find(|user| user.id == creator) {
-                                        img {
-                                            src: chat_user.profile_image.clone(),
+                                        components::avatar::Avatar {
+                                            src: Some(chat_user.profile_image.clone()),
                                             alt: chat_user.display_name.clone(),
-                                            class: "w-8 h-8 rounded-full"
-                                        },
+                                            size: components::avatar::Size::Small,
+                                        }
                                         div {
                                             class: "font-semibold text-blue-600",
                                             "{chat_user.display_name}"
                                         }
                                     } else {
-                                        img {
-                                            src: "",
-                                            alt: creator.to_string(),
-                                            class: "w-8 h-8 rounded-full"
-                                        },
+                                        components::avatar::Avatar {
+                                            src: None,
+                                            alt: "U K".to_string(),
+                                            size: components::avatar::Size::Small,
+                                        }
                                         div {
                                             class: "font-semibold text-blue-600",
                                             "Unknown({creator.to_string()})"
                                         }
                                     }
                                 } else {
-                                    img {
-                                        src: "",
-                                        alt: "System",
-                                        class: "w-8 h-8 rounded-full"
-                                    },
+                                    components::avatar::Avatar {
+                                        src: None,
+                                        alt: "S Y".to_string(),
+                                        size: components::avatar::Size::Small,
+                                    }
                                     div {
                                         class: "font-semibold text-blue-600 underline",
                                         "System"
@@ -319,12 +319,11 @@ pub fn Home() -> Element {
                         for user in &chat.users {
                             li {
                                 class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
-                                img {
-                                    src: user.profile_image.clone(),
+                                components::avatar::Avatar {
+                                    src: Some(user.profile_image.clone()),
                                     alt: user.display_name.clone(),
-                                    class: "w-8 h-8 rounded-full",
-                                    "{user.display_name.clone()}"
-                                },
+                                    size: components::avatar::Size::Small,
+                                }
                                 {user.display_name.clone()}
                             }
                         }
@@ -358,11 +357,10 @@ pub fn Home() -> Element {
                                 for user in &chat.users {
                                     li {
                                         class: "px-4 py-3 border-b last:border-b-0 flex items-center gap-3",
-                                        img {
-                                            src: user.profile_image.clone(),
+                                        components::avatar::Avatar {
+                                            src: Some(user.profile_image.clone()),
                                             alt: user.display_name.clone(),
-                                            class: "w-8 h-8 rounded-full",
-                                            "{user.display_name.clone()}"
+                                            size: components::avatar::Size::Small,
                                         },
                                         {user.display_name.clone()}
                                     }
