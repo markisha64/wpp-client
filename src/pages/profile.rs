@@ -1,5 +1,5 @@
 use crate::{route::Route, BACKEND_URL, CLAIMS, USER};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::{document::eval, prelude::*};
 use reqwest::{
@@ -134,7 +134,7 @@ pub fn Profile() -> Element {
 
                                 message_signal.write().replace(match task {
                                     Ok(_) => ("Profile updated successfully".to_string(), true),
-                                    Err(e) => (format!("{}", e), false)
+                                    Err(e) => (e.to_string(), false)
                                 });
                                 is_loading_signal.set(false);
                             });
@@ -278,9 +278,35 @@ pub fn Profile() -> Element {
                             class: "flex items-center justify-between pt-6 border-t",
                             button {
                                 r#type: "button",
-                                onclick: |_| {},
+                                onclick: move |_| {
+                                    *CLAIMS.write() = None;
+                                    *USER.write() = None;
+
+
+
+                                    let task = move || -> Result<(), anyhow::Error> {
+                                        web_sys::window()
+                                            .context("failed to get window")?
+                                            .local_storage()
+                                            .map_err(|_| anyhow!("failed to get local storage"))?
+                                            .context("failed to get storage")?
+                                            .remove_item("jwt_token")
+                                            .map_err(|_| anyhow!("failed to get local storage"))?;
+
+                                        Ok(())
+                                    };
+
+                                    match task() {
+                                        Ok(_) => {
+                                            navigator.replace(Route::Login);
+                                        },
+                                        Err(e) => {
+                                            message_signal.write().replace((e.to_string(), false));
+                                        }
+                                    }
+                                },
                                 class: "px-6 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 transition-colors",
-                                "Loguout"
+                                "Logout"
                             }
                             button {
                                 r#type: "submit",
