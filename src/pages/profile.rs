@@ -282,8 +282,6 @@ pub fn Profile() -> Element {
                                     *CLAIMS.write() = None;
                                     *USER.write() = None;
 
-
-
                                     let task = move || -> Result<(), anyhow::Error> {
                                         web_sys::window()
                                             .context("failed to get window")?
