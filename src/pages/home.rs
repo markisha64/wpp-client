@@ -8,7 +8,7 @@ use shared::api::{
     websocket::{WebsocketClientMessageData, WebsocketServerResData},
 };
 
-use crate::{components, CHATS, CLAIMS, USER};
+use crate::{components, CHATS, USER};
 
 #[derive(Clone)]
 pub enum UpdateHeight {
