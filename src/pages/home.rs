@@ -194,11 +194,8 @@ pub fn Home() -> Element {
             );
 
             loop {
-                let rrx = channel.next();
-                let nmsg = pin!(ms_js.recv::<String>()).next();
-
-                match select(rrx, nmsg).await {
-                    Either::Left((Some(e), _)) => {
+                tokio::select! {
+                    Some(e) = channel.next() => {
                         match e {
                             WebsocketServerResData::SetRoom {
                                 room_id,
@@ -211,17 +208,13 @@ pub fn Home() -> Element {
                             }
 
                             _ => {
-                                // TODO: decide to make this unreachable
+                                // TODO: add unreachable?
                             }
                         }
                     }
-
-                    Either::Left((None, _)) => {
-                        info!("unreachable?")
+                    _ = ms_js.recv::<String>() => {
                     }
-
-                    Either::Right((x, _)) => {}
-                }
+                };
             }
         },
     );
