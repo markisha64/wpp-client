@@ -180,37 +180,12 @@ pub fn Home() -> Element {
 
     use_coroutine(
         move |mut channel: UnboundedReceiver<WebsocketServerResData>| async move {
-            let mut ms_js = document::eval(
-                r"
-                    const device = new window.mediasoupClient.Device()     
-
-                    let producerTransport
-                    let consumerTransport
-
-                    while (true) {
-                        const msg = await dioxus.recv()
-                    }
-                ",
-            );
+            let mut ms_js = document::eval(include_str!("../../js/mediasoup.js"));
 
             loop {
                 tokio::select! {
                     Some(e) = channel.next() => {
-                        match e {
-                            WebsocketServerResData::SetRoom {
-                                room_id,
-                                consumer_transport_options,
-                                producer_transport_options,
-                                router_rtp_capabilities,
-                                producers,
-                            } => {
-                                let _ = ms_js.send(router_rtp_capabilities);
-                            }
-
-                            _ => {
-                                // TODO: add unreachable?
-                            }
-                        }
+                        let _ = ms_js.send(e);
                     }
                     _ = ms_js.recv::<String>() => {
                     }
