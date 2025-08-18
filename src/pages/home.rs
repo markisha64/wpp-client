@@ -1,6 +1,12 @@
+use std::pin::pin;
+
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
+use futures_util::{
+    future::{select, Either},
+    StreamExt,
+};
 use tokio::sync::oneshot;
 
 use shared::api::{
@@ -171,6 +177,54 @@ pub fn Home() -> Element {
             }
         }
     });
+
+    use_coroutine(
+        move |mut channel: UnboundedReceiver<WebsocketServerResData>| async move {
+            let mut ms_js = document::eval(
+                r"
+                    const device = new window.mediasoupClient.Device()     
+
+                    let producerTransport
+                    let consumerTransport
+
+                    while (true) {
+                        const msg = await dioxus.recv()
+                    }
+                ",
+            );
+
+            loop {
+                let rrx = channel.next();
+                let nmsg = pin!(ms_js.recv::<String>()).next();
+
+                match select(rrx, nmsg).await {
+                    Either::Left((Some(e), _)) => {
+                        match e {
+                            WebsocketServerResData::SetRoom {
+                                room_id,
+                                consumer_transport_options,
+                                producer_transport_options,
+                                router_rtp_capabilities,
+                                producers,
+                            } => {
+                                let _ = ms_js.send(router_rtp_capabilities);
+                            }
+
+                            _ => {
+                                // TODO: decide to make this unreachable
+                            }
+                        }
+                    }
+
+                    Either::Left((None, _)) => {
+                        info!("unreachable?")
+                    }
+
+                    Either::Right((x, _)) => {}
+                }
+            }
+        },
+    );
 
     rerender_signal.set(true);
 
