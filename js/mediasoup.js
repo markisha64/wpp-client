@@ -97,6 +97,144 @@ var dioxus;
 */
 const listeners = new Map()
 
+class Participant {
+  /**
+  * @param {string} id 
+  */
+  constructor(id) {
+    const container = document.querySelector("#container")
+
+    if (!container) {
+      return;
+    }
+
+
+    /**
+    * @type {MediaStream}
+    */
+    this.mediaStream = new MediaStream()
+    /**
+    * @type {HTMLElement}
+    */
+    this.figure = document.createElement('figure')
+    /**
+    * @type {HTMLVideoElement}
+    */
+    this.preview = document.createElement('video')
+
+    this.preview.muted = true
+    this.preview.controls = true
+
+    this.preview.onloadedmetadata = () => {
+      this.preview.play()
+    }
+
+    const figcaption = document.createElement('figcaption')
+
+    figcaption.innerText = `Participant ${id}`
+
+    this.figure.append(this.preview, figcaption)
+
+    container.append(this.figure)
+  }
+
+  /**
+  * @param {MediaStreamTrack} track 
+  */
+  addTrack(track) {
+    this.mediaStream.addTrack(track)
+    this.preview.srcObject = this.mediaStream
+  }
+
+  /**
+  * @param {MediaStreamTrack} track 
+  */
+  removeTrack(track) {
+    this.mediaStream.removeTrack(track)
+    this.preview.srcObject = this.mediaStream
+  }
+
+  hasTracks() {
+    return this.mediaStream.getTracks().length > 0
+  }
+
+  destroy() {
+    this.preview.srcObject = null
+    this.figure.remove()
+  }
+}
+
+class Participants {
+  constructor() {
+    /**
+    * @type {Map<string, Participant>}
+    */
+    this.participants = new Map()
+    /**
+    * @type {Map<string, MediaStreamTrack>}
+    */
+    this.producerIdToTrack = new Map()
+  }
+
+  /**
+  * @param {string} participantId 
+  * @param {string} producerId
+  * @param {MediaStreamTrack} track 
+  */
+  addTrack(
+    participantId,
+    producerId,
+    track
+  ) {
+    this.producerIdToTrack.set(producerId, track)
+    this.getOrCreateParticipant(participantId).addTrack(track)
+  }
+
+  /**
+  * @param {string} participantId 
+  * @param {string} producerId
+  */
+  removeTrack(
+    participantId,
+    producerId,
+
+  ) {
+    const track = this.producerIdToTrack.get(producerId)
+
+    if (!track) {
+      return
+    }
+
+    const participant = this.getOrCreateParticipant(participantId)
+
+    participant.removeTrack(track)
+
+    if (!participant.hasTracks()) {
+      this.participants.delete(participantId)
+      participant.destroy
+    }
+  }
+
+  /**
+  * @param {string} id 
+  * @returns {Participant}
+  */
+  getOrCreateParticipant(id) {
+    const participant = this.participants.get(id)
+
+    if (participant) {
+      return participant
+    }
+
+    const newParticipant = new Participant(id)
+    this.participants.set(id, newParticipant)
+
+    return newParticipant
+  }
+}
+
+const participants = new Participants()
+
 async function mediasoup() {
   while (true) {
     /**
@@ -185,7 +323,7 @@ async function mediasoup() {
         // sendPreview.srcObject = mediaStream;
 
         for (const track of mediaStream.getTracks()) {
-          const producer = await producerTransport.produce({ track })
+          await producerTransport.produce({ track })
         }
 
         consumerTransport = device.createRecvTransport(set_room_data.consumer_transport_options)
@@ -245,8 +383,8 @@ async function mediasoup() {
 
             dioxus.send(consumer_resume)
 
-            //      participants
-            // .addTrack(message.participantId, message.producerId, consumer.track);
+            participants
+              .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
             resolve(undefined);
           })
         })
@@ -254,8 +392,9 @@ async function mediasoup() {
         break;
 
       case "ProducerRemove":
-        //    participants
-        // .deleteTrack(message.participantId, message.producerId);
+        const producer_remove_data = msg.d;
+        participants
+          .removeTrack(producer_remove_data.participant_id, producer_remove_data.producer_id);
 
         break;
 
