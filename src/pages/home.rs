@@ -11,7 +11,7 @@ use tokio::sync::oneshot;
 
 use shared::api::{
     message::{CreateRequest, GetRequest},
-    websocket::{WebsocketClientMessageData, WebsocketServerResData},
+    websocket::{MediaSoup, WebsocketClientMessageData, WebsocketServerResData},
 };
 
 use crate::{components, CHATS, USER};
@@ -187,7 +187,7 @@ pub fn Home() -> Element {
                     Some(e) = channel.next() => {
                         let _ = ms_js.send(e);
                     }
-                    _ = ms_js.recv::<String>() => {
+                    _ms = ms_js.recv::<MediaSoup>() => {
                     }
                 };
             }
