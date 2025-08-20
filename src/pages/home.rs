@@ -1,17 +1,15 @@
-use std::pin::pin;
-
+use anyhow::anyhow;
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
-use dioxus_logger::tracing::info;
-use futures_util::{
-    future::{select, Either},
-    StreamExt,
-};
+use dioxus_logger::tracing::{self, info};
+use futures_util::StreamExt;
 use tokio::sync::oneshot;
 
 use shared::api::{
     message::{CreateRequest, GetRequest},
-    websocket::{MediaSoup, WebsocketClientMessageData, WebsocketServerResData},
+    websocket::{
+        MediaSoup, WebsocketClientMessageData, WebsocketServerMessage, WebsocketServerResData,
+    },
 };
 
 use crate::{components, CHATS, USER};
@@ -179,7 +177,7 @@ pub fn Home() -> Element {
     });
 
     use_coroutine(
-        move |mut channel: UnboundedReceiver<WebsocketServerResData>| async move {
+        move |mut channel: UnboundedReceiver<WebsocketServerMessage>| async move {
             let mut ms_js = document::eval(include_str!("../../js/mediasoup.js"));
 
             loop {
@@ -187,7 +185,26 @@ pub fn Home() -> Element {
                     Some(e) = channel.next() => {
                         let _ = ms_js.send(e);
                     }
-                    _ms = ms_js.recv::<MediaSoup>() => {
+                    ms_r = ms_js.recv::<MediaSoup>() => {
+                        let ms = match ms_r {
+                            Ok(ms) => ms,
+                            Err(e) => {
+                                info!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let rx = ws_request(WebsocketClientMessageData::MS(ms));
+
+                        match rx.await {
+                           Ok(data) => {
+                               let _ = ms_js.send(WebsocketServerMessage::RequestResponse { id: uuid::Uuid::nil(), data });
+                           },
+                           Err(e) => {
+                                info!("{}", e);
+                                continue;
+                           }
+                        }
                     }
                 };
             }

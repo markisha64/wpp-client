@@ -71,6 +71,13 @@ let consumerTransport
 }} Consume
 */
 
+/**
+* @typedef {{
+  t: "ConsumerResume",
+  d: {}
+}} ConsumerResume
+*/
+
 /** @typedef {{
   t: "ProducerRemove",
   d: {
@@ -81,21 +88,106 @@ let consumerTransport
 
 */
 /**
-* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | ProducerAdded | Consume | ProducerRemove} WebsocketServerResData
+* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume} WebsocketServerResData
 */
 
 /**
+* @template V, E
+* @typedef {{ Ok: V } | { Err: E }} Result<V, E>
+*/
+
+/**
+* @typedef {{
+  t: "RequestResponse",
+  c: {
+    id: string,
+    data: Result<WebsocketServerResData, string>
+  }
+}} RequestResponse
+*/
+
+/**
+* @typedef {ProducerAdded | ProducerRemove | RequestResponse} WebsocketServerMessage 
+*/
+
+/*
 * @type {{
   send: (msg: import('client_msg').MediaSoup) => void,
-  recv: () => Promise<any>
+  recv: () => Promise<WebsocketServerMessage>
 }}
 */
-var dioxus;
+
+
+/**
+* @param {import('client_msg').MediaSoup} msg 
+*/
+function send(msg) {
+  // @ts-ignore
+  dioxus.send(msg)
+}
+
+/**
+* @returns {Promise<WebsocketServerMessage>}
+*/
+async function recv() {
+  // @ts-ignore
+  return dioxus.recv()
+}
 
 /**
 * @type {Map<WebsocketServerResData['t'], (cv: any) => void>}
 */
 const listeners = new Map()
+
+
+/**
+* @overload
+* @param {import('client_msg').FinishInit} msg 
+* @returns {Promise<Result<import("client_msg").FinishInit, string>>}
+*/
+
+/**
+* @overload
+* @param {import('client_msg').ConnectProducerTransport} msg 
+* @returns {Promise<Result<import("client_msg").ConnectProducerTransport, string>>}
+*/
+
+/**
+* @overload
+* @param {import('client_msg').Produce} msg 
+* @returns {Promise<Result<Produce, string>>}
+*/
+
+/**
+* @overload
+* @param {import('client_msg').ConnectConsumerTransport} msg 
+* @returns {Promise<Result<import("client_msg").ConnectConsumerTransport, string>>}
+*/
+
+/**
+* @overload
+* @param {import('client_msg').Consume} msg 
+* @returns {Promise<Result<Consume, string>>}
+*/
+
+/**
+* @overload
+* @param {import('client_msg').ConsumerResume} msg 
+* @returns {Promise<Result<ConsumerResume, string>>}
+*/
+
+/**
+* @param {import('client_msg').MediaSoup} msg 
+* @returns {Promise<Result<WebsocketServerResData, string>>}
+*/
+async function ws_request(msg) {
+  return new Promise((resolve) => {
+    send(msg)
+
+    // @ts-ignore
+    listeners.set(msg.t, resolve)
+  })
+}
 
 class Participant {
   /**
@@ -237,119 +329,128 @@ const participants = new Participants()
 
 async function mediasoup() {
   while (true) {
-    /**
-    * @type {WebsocketServerResData}
-    */
-    const msg = await dioxus.recv()
-
-    const cb = listeners.get(msg.t)
-    if (cb) {
-      listeners.delete(msg.t)
-      cb(msg.d)
-
-      // skip switch case
-      continue
-    }
+    const msg = await recv()
 
     switch (msg.t) {
-      case "SetRoom":
-        const set_room_data = msg.d;
+      case "RequestResponse":
+        const data = msg.c.data;
 
-        await device.load({
-          routerRtpCapabilities: set_room_data.router_rtp_capabilities
-        });
+        if ("Ok" in data) {
+          if (data.Ok.t === "SetRoom") {
+            // TODO: clear?
 
-        /**
-        * @type {import('./client_msg').FinishInit}
-        */
-        const finishInit = {
-          t: "FinishInit",
-          d: device.rtpCapabilities
+            const set_room_data = data.Ok.d;
+
+            await device.load({
+              routerRtpCapabilities: set_room_data.router_rtp_capabilities
+            });
+
+            /**
+            * @type {import('./client_msg').FinishInit}
+            */
+            const finishInit = {
+              t: "FinishInit",
+              d: device.rtpCapabilities
+            }
+
+            await ws_request(finishInit)
+
+            producerTransport = device.createSendTransport(
+              set_room_data.producer_transport_options
+            )
+
+            producerTransport
+              .on('connect', async ({ dtlsParameters }, success, error) => {
+                /**
+                * @type {import('./client_msg').ConnectProducerTransport}
+                */
+                const connectProducerTransport = {
+                  t: "ConnectProducerTransport",
+                  d: dtlsParameters
+                }
+
+                const r = await ws_request(connectProducerTransport)
+                if ("Ok" in r) {
+                  success()
+                } else {
+                  error(new Error(r.Err))
+                }
+              })
+              .on('produce', async ({ kind, rtpParameters }, success, error) => {
+                /**
+                * @type {import('./client_msg').Produce}
+                */
+                const produce = {
+                  t: "Produce",
+                  d: [kind, rtpParameters]
+                }
+
+                const r = await ws_request(produce)
+                if ("Ok" in r) {
+                  success({ id: r.Ok.d })
+                } else {
+                  error(new Error(r.Err))
+                }
+              })
+
+            const mediaStream = await navigator.mediaDevices.getUserMedia({
+              audio: true,
+              video: {
+                width: {
+                  ideal: 1280
+                },
+                height: {
+                  ideal: 720
+                },
+                frameRate: {
+                  ideal: 60
+                }
+              }
+            })
+
+            // sendPreview.srcObject = mediaStream;
+
+            for (const track of mediaStream.getTracks()) {
+              await producerTransport.produce({ track })
+            }
+
+            consumerTransport = device.createRecvTransport(set_room_data.consumer_transport_options)
+
+            consumerTransport.on('connect', async ({ dtlsParameters }, success, error) => {
+              /**
+              * @type {import("./client_msg").ConnectConsumerTransport}
+              */
+              const connectConsumerTransport = {
+                t: "ConnectConsumerTransport",
+                d: dtlsParameters
+              }
+
+              const r = await ws_request(connectConsumerTransport)
+
+              if ("Ok" in r) {
+                success()
+              } else {
+                error(new Error(r.Err))
+              }
+            })
+          }
+
+          const cb = listeners.get(data.Ok.t)
+
+          if (cb) {
+            listeners.delete(data.Ok.t)
+            cb(data.Ok.d)
+          }
+        } else {
+          console.error(data)
         }
 
-        dioxus.send(finishInit)
-
-        producerTransport = device.createSendTransport(
-          set_room_data.producer_transport_options
-        )
-
-        producerTransport
-          .on('connect', ({ dtlsParameters }, success) => {
-            /**
-            * @type {import('./client_msg').ConnectProducerTransport}
-            */
-            const connectProducerTransport = {
-              t: "ConnectProducerTransport",
-              d: dtlsParameters
-            }
-
-            dioxus.send(connectProducerTransport)
-
-            listeners.set('ConnectProducerTransport', () => {
-              success()
-            })
-          })
-          .on('produce', ({ kind, rtpParameters }, success) => {
-            /**
-            * @type {import('./client_msg').Produce}
-            */
-            const produce = {
-              t: "Produce",
-              d: [kind, rtpParameters]
-            }
-
-            dioxus.send(produce)
-
-            listeners.set("Produce", (id) => {
-              success({ id })
-            })
-          })
-
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: {
-            width: {
-              ideal: 1280
-            },
-            height: {
-              ideal: 720
-            },
-            frameRate: {
-              ideal: 60
-            }
-          }
-        })
-
-        // sendPreview.srcObject = mediaStream;
-
-        for (const track of mediaStream.getTracks()) {
-          await producerTransport.produce({ track })
-        }
-
-        consumerTransport = device.createRecvTransport(set_room_data.consumer_transport_options)
-
-        consumerTransport.on('connect', ({ dtlsParameters }, success) => {
-          /**
-          * @type {import("./client_msg").ConnectConsumerTransport}
-          */
-          const connectConsumerTransport = {
-            t: "ConnectConsumerTransport",
-            d: dtlsParameters
-          }
-
-          dioxus.send(connectConsumerTransport)
-
-          listeners.set("ConnectConsumerTransport", () => {
-            success()
-          })
-        })
-
-        break;
+        break
 
       case "ProducerAdded":
         const producer_added_data = msg.d;
 
-        await new Promise((resolve) => {
+        await new Promise(async (resolve, reject) => {
           /**
           * @type {import("./client_msg").Consume}
           */
@@ -358,7 +459,10 @@ async function mediasoup() {
             d: producer_added_data.producer_id
           }
 
-          dioxus.send(consume)
+          const r = await ws_request(consume)
+          if ("Err" in r) {
+            return reject(r.Err)
+          }
 
           listeners.set('Consume', async (d) => {
             /**
@@ -381,11 +485,14 @@ async function mediasoup() {
               d: consumer.id
             }
 
-            dioxus.send(consumer_resume)
-
-            participants
-              .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
-            resolve(undefined);
+            const r = await ws_request(consumer_resume)
+            if ("Ok" in r) {
+              participants
+                .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
+              resolve(undefined);
+            } else {
+              reject(r.Err)
+            }
           })
         })
 

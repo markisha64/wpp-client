@@ -265,7 +265,15 @@ fn App() -> Element {
                                                     USER.write().replace(user);
                                                 }
 
-                                                _ => todo!("mediasoup"),
+                                                WebsocketServerMessage::ProducerAdded {
+                                                    participant_id,
+                                                    producer_id,
+                                                } => todo!("implement"),
+
+                                                WebsocketServerMessage::ProducerRemove {
+                                                    participant_id,
+                                                    producer_id,
+                                                } => todo!("implement"),
                                             }
                                         }
                                     }
