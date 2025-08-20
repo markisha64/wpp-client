@@ -327,191 +327,210 @@ class Participants {
 
 const participants = new Participants()
 
-async function mediasoup() {
-  while (true) {
-    const msg = await recv()
+/**
+* @param {WebsocketServerMessage} msg 
+*/
+async function mediasoupHandler(msg) {
+  switch (msg.t) {
+    case "RequestResponse":
+      const data = msg.c.data;
 
-    console.log(msg)
+      if ("Ok" in data) {
+        if (data.Ok.t === "SetRoom") {
+          // TODO: clear?
 
-    switch (msg.t) {
-      case "RequestResponse":
-        const data = msg.c.data;
+          const set_room_data = data.Ok.c;
 
-        if ("Ok" in data) {
-          if (data.Ok.t === "SetRoom") {
-            // TODO: clear?
+          await device.load({
+            routerRtpCapabilities: set_room_data.router_rtp_capabilities
+          });
 
-            console.log(msg)
+          /**
+          * @type {import('./client_msg').FinishInit}
+          */
+          const finishInit = {
+            t: "FinishInit",
+            c: device.rtpCapabilities
+          }
 
-            const set_room_data = data.Ok.c;
+          await ws_request(finishInit)
 
-            await device.load({
-              routerRtpCapabilities: set_room_data.router_rtp_capabilities
-            });
+          producerTransport = device.createSendTransport(
+            set_room_data.producer_transport_options
+          )
 
-            /**
-            * @type {import('./client_msg').FinishInit}
-            */
-            const finishInit = {
-              t: "FinishInit",
-              c: device.rtpCapabilities
-            }
-
-            await ws_request(finishInit)
-
-            producerTransport = device.createSendTransport(
-              set_room_data.producer_transport_options
-            )
-
-            producerTransport
-              .on('connect', async ({ dtlsParameters }, success, error) => {
-                /**
-                * @type {import('./client_msg').ConnectProducerTransport}
-                */
-                const connectProducerTransport = {
-                  t: "ConnectProducerTransport",
-                  c: dtlsParameters
-                }
-
-                const r = await ws_request(connectProducerTransport)
-                if ("Ok" in r) {
-                  success()
-                } else {
-                  error(new Error(r.Err))
-                }
-              })
-              .on('produce', async ({ kind, rtpParameters }, success, error) => {
-                /**
-                * @type {import('./client_msg').Produce}
-                */
-                const produce = {
-                  t: "Produce",
-                  c: [kind, rtpParameters]
-                }
-
-                const r = await ws_request(produce)
-                if ("Ok" in r) {
-                  success({ id: r.Ok.c })
-                } else {
-                  error(new Error(r.Err))
-                }
-              })
-
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-              audio: true,
-              video: {
-                width: {
-                  ideal: 1280
-                },
-                height: {
-                  ideal: 720
-                },
-                frameRate: {
-                  ideal: 60
-                }
-              }
-            })
-
-            // sendPreview.srcObject = mediaStream;
-
-            for (const track of mediaStream.getTracks()) {
-              await producerTransport.produce({ track })
-            }
-
-            consumerTransport = device.createRecvTransport(set_room_data.consumer_transport_options)
-
-            consumerTransport.on('connect', async ({ dtlsParameters }, success, error) => {
+          producerTransport
+            .on('connect', async ({ dtlsParameters }, success, error) => {
               /**
-              * @type {import("./client_msg").ConnectConsumerTransport}
+              * @type {import('./client_msg').ConnectProducerTransport}
               */
-              const connectConsumerTransport = {
-                t: "ConnectConsumerTransport",
+              const connectProducerTransport = {
+                t: "ConnectProducerTransport",
                 c: dtlsParameters
               }
 
-              const r = await ws_request(connectConsumerTransport)
-
+              const r = await ws_request(connectProducerTransport)
               if ("Ok" in r) {
                 success()
               } else {
                 error(new Error(r.Err))
               }
             })
+            .on('produce', async ({ kind, rtpParameters }, success, error) => {
+              /**
+              * @type {import('./client_msg').Produce}
+              */
+              const produce = {
+                t: "Produce",
+                c: [kind, rtpParameters]
+              }
+
+              const r = await ws_request(produce)
+              if ("Ok" in r) {
+                success({ id: r.Ok.c })
+              } else {
+                error(new Error(r.Err))
+              }
+            })
+
+          const mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: {
+              width: {
+                ideal: 1280
+              },
+              height: {
+                ideal: 720
+              },
+              frameRate: {
+                ideal: 60
+              }
+            }
+          })
+
+          // sendPreview.srcObject = mediaStream;
+
+          for (const track of mediaStream.getTracks()) {
+            await producerTransport.produce({ track })
           }
 
+          consumerTransport = device.createRecvTransport(set_room_data.consumer_transport_options)
+
+          consumerTransport.on('connect', async ({ dtlsParameters }, success, error) => {
+            /**
+            * @type {import("./client_msg").ConnectConsumerTransport}
+            */
+            const connectConsumerTransport = {
+              t: "ConnectConsumerTransport",
+              c: dtlsParameters
+            }
+
+            const r = await ws_request(connectConsumerTransport)
+
+            if ("Ok" in r) {
+              success()
+            } else {
+              error(new Error(r.Err))
+            }
+          })
+        }
+      } else {
+        console.error(data)
+      }
+
+      break
+
+    case "ProducerAdded":
+      const producer_added_data = msg.c;
+
+      await new Promise(async (resolve, reject) => {
+        /**
+        * @type {import("./client_msg").Consume}
+        */
+        const consume = {
+          t: "Consume",
+          c: producer_added_data.producer_id
+        }
+
+        const r = await ws_request(consume)
+        if ("Err" in r) {
+          return reject(r.Err)
+        }
+
+        listeners.set('Consume', async (d) => {
+          /**
+          * @type {Consume['c']}
+          */
+          let consumer_data = d
+
+          const consumer = await consumerTransport.consume({
+            id: consumer_data.id,
+            producerId: consumer_data.producer_id,
+            kind: consumer_data.kind,
+            rtpParameters: consumer_data.rtp_parameters,
+          })
+
+          /**
+          * @type {import("client_msg").ConsumerResume}
+          */
+          const consumer_resume = {
+            t: "ConsumerResume",
+            c: consumer.id
+          }
+
+          const r = await ws_request(consumer_resume)
+          if ("Ok" in r) {
+            participants
+              .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
+            resolve(undefined);
+          } else {
+            reject(r.Err)
+          }
+        })
+      })
+
+      break;
+
+    case "ProducerRemove":
+      const producer_remove_data = msg.c;
+      participants
+        .removeTrack(producer_remove_data.participant_id, producer_remove_data.producer_id);
+
+      break;
+
+    default:
+      console.error("Received unexpected message", msg)
+  }
+}
+
+async function mediasoup() {
+  while (true) {
+    const msg = await recv()
+
+    console.log(msg)
+
+    if (msg.t === "RequestResponse") {
+      const data = msg.c.data;
+
+      if ("Ok" in data) {
+        if (data.Ok.t !== "SetRoom") {
           const cb = listeners.get(data.Ok.t)
 
           if (cb) {
             listeners.delete(data.Ok.t)
             cb(data.Ok.c)
           }
-        } else {
-          console.error(data)
+
+          continue
         }
-
-        break
-
-      case "ProducerAdded":
-        const producer_added_data = msg.c;
-
-        await new Promise(async (resolve, reject) => {
-          /**
-          * @type {import("./client_msg").Consume}
-          */
-          const consume = {
-            t: "Consume",
-            c: producer_added_data.producer_id
-          }
-
-          const r = await ws_request(consume)
-          if ("Err" in r) {
-            return reject(r.Err)
-          }
-
-          listeners.set('Consume', async (d) => {
-            /**
-            * @type {Consume['c']}
-            */
-            let consumer_data = d
-
-            const consumer = await consumerTransport.consume({
-              id: consumer_data.id,
-              producerId: consumer_data.producer_id,
-              kind: consumer_data.kind,
-              rtpParameters: consumer_data.rtp_parameters,
-            })
-
-            /**
-            * @type {import("client_msg").ConsumerResume}
-            */
-            const consumer_resume = {
-              t: "ConsumerResume",
-              c: consumer.id
-            }
-
-            const r = await ws_request(consumer_resume)
-            if ("Ok" in r) {
-              participants
-                .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
-              resolve(undefined);
-            } else {
-              reject(r.Err)
-            }
-          })
-        })
-
-        break;
-
-      case "ProducerRemove":
-        const producer_remove_data = msg.c;
-        participants
-          .removeTrack(producer_remove_data.participant_id, producer_remove_data.producer_id);
-
-        break;
-
-      default:
-        console.error("Received unexpected message", msg)
+      } else {
+        console.error(msg)
+        continue
+      }
     }
+
+    mediasoupHandler(msg)
+      .catch(console.error)
   }
 }
 

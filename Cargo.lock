@@ -2286,7 +2286,7 @@ dependencies = [
 [[package]]
 name = "shared"
 version = "0.1.0"
-source = "git+https://github.com/markisha64/wpp-server#7265228d1a3f3c2b5df4c553cabcdc2f2582441b"
+source = "git+https://github.com/markisha64/wpp-server#3ca407a5a000b24a742d32cb1451a38d04b96e0a"
 dependencies = [
  "bson",
  "mediasoup-types",
