@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{self, info};
@@ -176,11 +175,11 @@ pub fn Home() -> Element {
         }
     });
 
-    use_coroutine(
+    let ms_handler = use_coroutine(
         move |mut channel: UnboundedReceiver<WebsocketServerMessage>| async move {
             let mut ms_js = document::eval(include_str!("../../js/mediasoup.js"));
 
-            loop {
+            for _ in 0..10 {
                 tokio::select! {
                     Some(e) = channel.next() => {
                         let _ = ms_js.send(e);
@@ -229,14 +228,32 @@ pub fn Home() -> Element {
                             class: "font-bold text-lg",
                             "{chat.name} ({chat.id.to_string()})"
                         }
-                        button {
-                            class: "lg:hidden px-3 py-1 border rounded text-sm",
-                            onclick: move |_| {
-                                show_users_signal.set(!show_users);
-                            },
-                            match show_users {
-                                true => "Hide Users",
-                                false => "Show Users"
+                        div {
+                            button {
+                                class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700",
+                                onclick: move |_| {
+                                    async move {
+                                        let res = ws_request(WebsocketClientMessageData::MS(MediaSoup::SetRoom(chat.id)));
+
+                                        match res.await {
+                                            Ok(data) => {
+                                                ms_handler.send(WebsocketServerMessage::RequestResponse { id: uuid::Uuid::nil(), data });
+                                            },
+                                            Err(e) => tracing::error!("{}", e)
+                                        };
+                                    }
+                                },
+                                "Call"
+                            }
+                            button {
+                                class: "lg:hidden px-3 py-1 border rounded text-sm",
+                                onclick: move |_| {
+                                    show_users_signal.set(!show_users);
+                                },
+                                match show_users {
+                                    true => "Hide Users",
+                                    false => "Show Users"
+                                }
                             }
                         }
                     },

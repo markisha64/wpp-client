@@ -339,6 +339,8 @@ async function mediasoup() {
           if (data.Ok.t === "SetRoom") {
             // TODO: clear?
 
+            console.log(msg)
+
             const set_room_data = data.Ok.d;
 
             await device.load({
@@ -511,5 +513,7 @@ async function mediasoup() {
   }
 }
 
-mediasoup()
+// @ts-ignore
+await mediasoup()
+  .catch(console.error)
 
