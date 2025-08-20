@@ -18,7 +18,7 @@ let consumerTransport
 /**
 * @typedef {{
   t: "SetRoom",
-  d: {
+  c: {
     room_id: string,
     consumer_transport_options: import("mediasoup-client").types.TransportOptions,
     producer_transport_options: import("mediasoup-client").types.TransportOptions,
@@ -31,28 +31,28 @@ let consumerTransport
 /**
 * @typedef {{
   t: "ConnectProducerTransport",
-  d: {}
+  c: {}
 }} ConnectProducerTransport
 */
 
 /**
 * @typedef {{
   t: "Produce",
-  d: string
+  c: string
 }} Produce
 */
 
 /**
 * @typedef {{
   t: "ConnectConsumerTransport",
-  d: {}
+  c: {}
 }} ConnectConsumerTransport
 */
 
 /**
 * @typedef {{
   t: "ProducerAdded",
-  d: {
+  c: {
     participant_id: string,
     producer_id: string,
   }
@@ -62,7 +62,7 @@ let consumerTransport
 /**
 * @typedef {{
   t: "Consume",
-  d: {
+  c: {
     id: String,
     producer_id: String,
     kind: import("mediasoup-client").types.MediaKind,
@@ -74,13 +74,13 @@ let consumerTransport
 /**
 * @typedef {{
   t: "ConsumerResume",
-  d: {}
+  c: {}
 }} ConsumerResume
 */
 
 /** @typedef {{
   t: "ProducerRemove",
-  d: {
+  c: {
     participant_id: string,
     producer_id: string,
   }
@@ -119,7 +119,7 @@ let consumerTransport
 
 
 /**
-* @param {import('client_msg').MediaSoup} msg 
+* @param {import("client_msg").MediaSoup} msg 
 */
 function send(msg) {
   // @ts-ignore
@@ -331,6 +331,8 @@ async function mediasoup() {
   while (true) {
     const msg = await recv()
 
+    console.log(msg)
+
     switch (msg.t) {
       case "RequestResponse":
         const data = msg.c.data;
@@ -341,7 +343,7 @@ async function mediasoup() {
 
             console.log(msg)
 
-            const set_room_data = data.Ok.d;
+            const set_room_data = data.Ok.c;
 
             await device.load({
               routerRtpCapabilities: set_room_data.router_rtp_capabilities
@@ -352,7 +354,7 @@ async function mediasoup() {
             */
             const finishInit = {
               t: "FinishInit",
-              d: device.rtpCapabilities
+              c: device.rtpCapabilities
             }
 
             await ws_request(finishInit)
@@ -368,7 +370,7 @@ async function mediasoup() {
                 */
                 const connectProducerTransport = {
                   t: "ConnectProducerTransport",
-                  d: dtlsParameters
+                  c: dtlsParameters
                 }
 
                 const r = await ws_request(connectProducerTransport)
@@ -384,12 +386,12 @@ async function mediasoup() {
                 */
                 const produce = {
                   t: "Produce",
-                  d: [kind, rtpParameters]
+                  c: [kind, rtpParameters]
                 }
 
                 const r = await ws_request(produce)
                 if ("Ok" in r) {
-                  success({ id: r.Ok.d })
+                  success({ id: r.Ok.c })
                 } else {
                   error(new Error(r.Err))
                 }
@@ -424,7 +426,7 @@ async function mediasoup() {
               */
               const connectConsumerTransport = {
                 t: "ConnectConsumerTransport",
-                d: dtlsParameters
+                c: dtlsParameters
               }
 
               const r = await ws_request(connectConsumerTransport)
@@ -441,7 +443,7 @@ async function mediasoup() {
 
           if (cb) {
             listeners.delete(data.Ok.t)
-            cb(data.Ok.d)
+            cb(data.Ok.c)
           }
         } else {
           console.error(data)
@@ -450,7 +452,7 @@ async function mediasoup() {
         break
 
       case "ProducerAdded":
-        const producer_added_data = msg.d;
+        const producer_added_data = msg.c;
 
         await new Promise(async (resolve, reject) => {
           /**
@@ -458,7 +460,7 @@ async function mediasoup() {
           */
           const consume = {
             t: "Consume",
-            d: producer_added_data.producer_id
+            c: producer_added_data.producer_id
           }
 
           const r = await ws_request(consume)
@@ -468,7 +470,7 @@ async function mediasoup() {
 
           listeners.set('Consume', async (d) => {
             /**
-            * @type {Consume['d']}
+            * @type {Consume['c']}
             */
             let consumer_data = d
 
@@ -484,7 +486,7 @@ async function mediasoup() {
             */
             const consumer_resume = {
               t: "ConsumerResume",
-              d: consumer.id
+              c: consumer.id
             }
 
             const r = await ws_request(consumer_resume)
@@ -501,7 +503,7 @@ async function mediasoup() {
         break;
 
       case "ProducerRemove":
-        const producer_remove_data = msg.d;
+        const producer_remove_data = msg.c;
         participants
           .removeTrack(producer_remove_data.participant_id, producer_remove_data.producer_id);
 
@@ -512,6 +514,8 @@ async function mediasoup() {
     }
   }
 }
+
+setInterval(() => { }, 2000)
 
 // @ts-ignore
 await mediasoup()

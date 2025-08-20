@@ -181,7 +181,7 @@ pub fn Home() -> Element {
 
             for _ in 0..10 {
                 tokio::select! {
-                    Some(e) = channel.next() => {
+                    e = channel.select_next_some() => {
                         let _ = ms_js.send(e);
                     }
                     ms_r = ms_js.recv::<MediaSoup>() => {
