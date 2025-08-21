@@ -341,6 +341,59 @@ class Participants {
 const participants = new Participants()
 
 /**
+* @param {ProducerAdded} msg 
+*/
+async function producerAdded(msg) {
+  const producer_added_data = msg.c;
+
+  await new Promise(async (resolve, reject) => {
+    /**
+    * @type {import("./client_msg").Consume}
+    */
+    const consume = {
+      t: "Consume",
+      c: producer_added_data.producer_id
+    }
+
+    const r = await ws_request(consume)
+    if ("Err" in r) {
+      return reject(r.Err)
+    }
+
+    listeners.set('Consume', async (d) => {
+      /**
+      * @type {Consume['c']}
+      */
+      let consumer_data = d
+
+      const consumer = await consumerTransport.consume({
+        id: consumer_data.id,
+        producerId: consumer_data.producer_id,
+        kind: consumer_data.kind,
+        rtpParameters: consumer_data.rtp_parameters,
+      })
+
+      /**
+      * @type {import("client_msg").ConsumerResume}
+      */
+      const consumer_resume = {
+        t: "ConsumerResume",
+        c: consumer.id
+      }
+
+      const r = await ws_request(consumer_resume)
+      if ("Ok" in r) {
+        participants
+          .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
+        resolve(undefined);
+      } else {
+        reject(r.Err)
+      }
+    })
+  })
+}
+
+/**
 * @param {WebsocketServerMessage} msg 
 */
 async function mediasoupHandler(msg) {
@@ -370,11 +423,6 @@ async function mediasoupHandler(msg) {
           if ("Err" in ice_servers_string) {
             return;
           }
-
-          console.log({
-            ...set_room_data.producer_transport_options,
-            ...JSON.parse(ice_servers_string.Ok.c)
-          })
 
           producerTransport = device.createSendTransport({
             ...set_room_data.producer_transport_options,
@@ -462,6 +510,16 @@ async function mediasoupHandler(msg) {
               error(new Error(r.Err))
             }
           })
+
+          for (const [participant_id, producer_id] of set_room_data.producers) {
+            await producerAdded({
+              t: "ProducerAdded",
+              c: {
+                participant_id,
+                producer_id
+              }
+            })
+          }
         }
       } else {
         console.error(data)
@@ -470,53 +528,7 @@ async function mediasoupHandler(msg) {
       break
 
     case "ProducerAdded":
-      const producer_added_data = msg.c;
-
-      await new Promise(async (resolve, reject) => {
-        /**
-        * @type {import("./client_msg").Consume}
-        */
-        const consume = {
-          t: "Consume",
-          c: producer_added_data.producer_id
-        }
-
-        const r = await ws_request(consume)
-        if ("Err" in r) {
-          return reject(r.Err)
-        }
-
-        listeners.set('Consume', async (d) => {
-          /**
-          * @type {Consume['c']}
-          */
-          let consumer_data = d
-
-          const consumer = await consumerTransport.consume({
-            id: consumer_data.id,
-            producerId: consumer_data.producer_id,
-            kind: consumer_data.kind,
-            rtpParameters: consumer_data.rtp_parameters,
-          })
-
-          /**
-          * @type {import("client_msg").ConsumerResume}
-          */
-          const consumer_resume = {
-            t: "ConsumerResume",
-            c: consumer.id
-          }
-
-          const r = await ws_request(consumer_resume)
-          if ("Ok" in r) {
-            participants
-              .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
-            resolve(undefined);
-          } else {
-            reject(r.Err)
-          }
-        })
-      })
+      await producerAdded(msg)
 
       break;
 
