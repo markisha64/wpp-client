@@ -181,7 +181,7 @@ pub fn Home() -> Element {
         move |mut channel: UnboundedReceiver<WebsocketServerMessage>| async move {
             let mut ms_js = document::eval(include_str!("../../js/mediasoup.js"));
 
-            for _ in 0..10 {
+            loop {
                 tokio::select! {
                     e = channel.select_next_some() => {
                         let _ = ms_js.send(e);
