@@ -85,10 +85,17 @@ let consumerTransport
     producer_id: string,
   }
 }} ProducerRemove
-
 */
+
 /**
-* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume} WebsocketServerResData
+* @typedef {{
+  t: "FinishInit",
+  c: string
+}} FinishInit
+*/
+
+/**
+* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume | FinishInit} WebsocketServerResData}
 */
 
 /**
@@ -143,7 +150,7 @@ const listeners = new Map()
 /**
 * @overload
 * @param {import('client_msg').FinishInit} msg 
-* @returns {Promise<Result<import("client_msg").FinishInit, string>>}
+* @returns {Promise<Result<FinishInit, string>>}
 */
 
 /**
@@ -353,11 +360,20 @@ async function mediasoupHandler(msg) {
             c: device.rtpCapabilities
           }
 
-          await ws_request(finishInit)
+          const ice_servers_string = await ws_request(finishInit)
+          if ("Err" in ice_servers_string) {
+            return;
+          }
 
-          producerTransport = device.createSendTransport(
-            set_room_data.producer_transport_options
-          )
+          console.log({
+            ...set_room_data.producer_transport_options,
+            ...JSON.parse(ice_servers_string.Ok.c)
+          })
+
+          producerTransport = device.createSendTransport({
+            ...set_room_data.producer_transport_options,
+            ...JSON.parse(ice_servers_string.Ok.c)
+          })
 
           producerTransport
             .on('connect', async ({ dtlsParameters }, success, error) => {
@@ -518,7 +534,7 @@ async function mediasoup() {
 
           if (cb) {
             listeners.delete(data.Ok.t)
-            cb(data.Ok.c)
+            cb(data)
           }
 
           continue
