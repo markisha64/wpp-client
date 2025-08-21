@@ -31,12 +31,10 @@ watch_path = ["src", "assets", "js"]
 
 # CSS style file
 
-style = ["/assets/tailwind.css"]
+style = []
 
 # Javascript code file
-script = [
-  "/assets/mediasoup-client.bundle.js"
-]
+script = []
 
 [web.resource.dev]
 

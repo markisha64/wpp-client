@@ -301,6 +301,9 @@ fn App() -> Element {
         document::Stylesheet {
             href: asset!("/assets/tailwind.css")
         }
+        document::Script {
+            src: asset!("/assets/mediasoup-client.bundle.js")
+        }
         div {
             id: "toast",
             class: "fixed top-5 right-5 z-70 hidden",
