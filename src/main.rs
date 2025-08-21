@@ -52,12 +52,17 @@ pub static USER: GlobalSignal<Option<UserSafe>> = Signal::global(|| None);
 pub static CLAIMS: GlobalSignal<Option<Auth>> = Signal::global(|| {
     let storage = web_sys::window()?.local_storage().ok()??;
     let jwt_token = storage.get_item("jwt_token").ok()??;
-
     let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
     validation.insecure_disable_signature_validation();
 
     let key = DecodingKey::from_secret(&[]);
-    let payload = jsonwebtoken::decode::<Claims>(jwt_token.as_str(), &key, &validation).ok()?;
+    let payload = match jsonwebtoken::decode::<Claims>(jwt_token.as_str(), &key, &validation) {
+        Ok(e) => Some(e),
+        Err(_) => {
+            storage.remove_item("jwt_tooken").ok()?;
+            None
+        }
+    }?;
 
     if payload.claims.exp <= Utc::now().timestamp() as usize {
         storage.remove_item("jwt_token").ok()?;
