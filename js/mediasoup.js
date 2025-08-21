@@ -424,7 +424,14 @@ async function mediasoupHandler(msg) {
             }
           })
 
-          // sendPreview.srcObject = mediaStream;
+          /**
+          * @type {HTMLVideoElement | null}
+          */
+          const sendPreview = document.querySelector("#preview-send")
+          if (sendPreview) {
+            sendPreview.srcObject = mediaStream;
+            sendPreview.play()
+          }
 
           for (const track of mediaStream.getTracks()) {
             await producerTransport.produce({ track })

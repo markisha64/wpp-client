@@ -31,6 +31,8 @@ pub fn Home() -> Element {
     let mut rerender_signal = use_signal(|| false);
     let mut show_users_signal = use_signal(|| true);
 
+    let mut show_media_signal = use_signal(|| false);
+
     let ws_request = move |req| -> oneshot::Receiver<_> {
         let (tx, rx) = oneshot::channel();
 
@@ -210,6 +212,16 @@ pub fn Home() -> Element {
         },
     );
 
+    let show_media = show_media_signal();
+    let media_sources_class = match show_media {
+        true => "",
+        false => "hidden",
+    };
+    let messages_class = match show_media {
+        true => "basis-[40%]",
+        false => "flex-1",
+    };
+
     rerender_signal.set(true);
 
     rsx! {
@@ -237,6 +249,7 @@ pub fn Home() -> Element {
 
                                         match res.await {
                                             Ok(data) => {
+                                                *show_media_signal.write() = true;
                                                 ms_handler.send(WebsocketServerMessage::RequestResponse { id: uuid::Uuid::nil(), data });
                                             },
                                             Err(e) => tracing::error!("{}", e)
@@ -258,7 +271,30 @@ pub fn Home() -> Element {
                         }
                     },
                     div {
-                        class: "flex-1 overflow-y-auto p-4 space-y-4",
+                        class: "basis-[60%] bg-gray-800 text-white overflow-hidden {media_sources_class}",
+                        div {
+                            class: "h-full w-full flex flex-wrap items-start content-start justify-center gap-4 p-4 overflow-auto",
+                            id: "media-sources",
+                            figure {
+                                class: "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full",
+                                div {
+                                    class: "relative rounded-xl overflow-hidden bg-black ring-1 ring-white/10 shadow-lg",
+                                    video {
+                                        class: "block w-full aspect-video object-cover",
+                                        id: "preview-send",
+                                        muted: true,
+                                        controls: false,
+                                    }
+                                    figcaption {
+                                        class: "mt-2 text-center text-sm text-white/70",
+                                        "You"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    div {
+                        class: "{messages_class} overflow-y-auto p-4 space-y-4",
                         onscroll: move |_| {
                             update_height_signal.set(UpdateHeight::CheckNeed);
                         },
