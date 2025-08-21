@@ -201,12 +201,11 @@ class Participant {
   * @param {string} id 
   */
   constructor(id) {
-    const container = document.querySelector("#container")
+    const container = document.querySelector("#media-sources")
 
     if (!container) {
       return;
     }
-
 
     /**
     * @type {MediaStream}
@@ -215,14 +214,18 @@ class Participant {
     /**
     * @type {HTMLElement}
     */
-    this.figure = document.createElement('figure')
+    this.figure = document.createElement('figure', {})
+    this.figure.classList.add("flex-[0_1_320px]", "min-w-[220px]", "max-w-[360px]", "max-w-full")
+
+    const wrapper = document.createElement("div")
+    wrapper.classList.add("relative", "rounded-xl", "overflow-hidden", "bg-black", "ring-1", "ring-white/10", "shadow-lg")
+
     /**
     * @type {HTMLVideoElement}
     */
     this.preview = document.createElement('video')
-
+    this.preview.classList.add("block", "w-full", "aspect-video", "object-cover")
     this.preview.muted = true
-    this.preview.controls = true
 
     this.preview.onloadedmetadata = () => {
       this.preview.play()
@@ -230,9 +233,12 @@ class Participant {
 
     const figcaption = document.createElement('figcaption')
 
+    figcaption.classList.add("mt-2", "text-center", "text-sm", "text-white/70")
     figcaption.innerText = `Participant ${id}`
 
-    this.figure.append(this.preview, figcaption)
+    wrapper.append(this.preview, figcaption)
+
+    this.figure.append(wrapper)
 
     container.append(this.figure)
   }
