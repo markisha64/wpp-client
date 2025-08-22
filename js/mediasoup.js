@@ -328,7 +328,7 @@ class Participants {
 
     if (!participant.hasTracks()) {
       this.participants.delete(participantId)
-      participant.destroy
+      participant.destroy()
     }
   }
 
