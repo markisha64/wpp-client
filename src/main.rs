@@ -248,7 +248,6 @@ fn App() -> Element {
                                                 participant_id,
                                                 producer_id,
                                             } => {
-                                                info!("producer added");
                                                 let _ = ms_js.send(WebsocketServerMessage::ProducerAdded { participant_id, producer_id  });
                                             },
 
