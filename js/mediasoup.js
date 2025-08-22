@@ -95,7 +95,19 @@ let consumerTransport
 */
 
 /**
-* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume | FinishInit} WebsocketServerResData}
+* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume | FinishInit} MediaSoupResponse
+*/
+
+/**
+* @template T
+* @typedef {{
+  t: "MS",
+  c: T
+}} MS<T>
+*/
+
+/**
+* @typedef {MS<MediaSoupResponse>} WebsocketServerResData
 */
 
 /**
@@ -142,7 +154,7 @@ async function recv() {
 }
 
 /**
-* @type {Map<WebsocketServerResData['t'], (cv: any) => void>}
+* @type {Map<MediaSoupResponse['t'], (cv: any) => void>}
 */
 const listeners = new Map()
 
@@ -150,42 +162,42 @@ const listeners = new Map()
 /**
 * @overload
 * @param {import('client_msg').FinishInit} msg 
-* @returns {Promise<Result<FinishInit, string>>}
+* @returns {Promise<Result<MS<FinishInit>, string>>}
 */
 
 /**
 * @overload
 * @param {import('client_msg').ConnectProducerTransport} msg 
-* @returns {Promise<Result<import("client_msg").ConnectProducerTransport, string>>}
+* @returns {Promise<Result<MS<ConnectProducerTransport>, string>>}
 */
 
 /**
 * @overload
 * @param {import('client_msg').Produce} msg 
-* @returns {Promise<Result<Produce, string>>}
+* @returns {Promise<Result<MS<Produce>, string>>}
 */
 
 /**
 * @overload
 * @param {import('client_msg').ConnectConsumerTransport} msg 
-* @returns {Promise<Result<import("client_msg").ConnectConsumerTransport, string>>}
+* @returns {Promise<Result<MS<ConnectConsumerTransport>, string>>}
 */
 
 /**
 * @overload
 * @param {import('client_msg').Consume} msg 
-* @returns {Promise<Result<Consume, string>>}
+* @returns {Promise<Result<MS<Consume>, string>>}
 */
 
 /**
 * @overload
 * @param {import('client_msg').ConsumerResume} msg 
-* @returns {Promise<Result<ConsumerResume, string>>}
+* @returns {Promise<Result<MS<ConsumerResume>, string>>}
 */
 
 /**
 * @param {import('client_msg').MediaSoup} msg 
-* @returns {Promise<Result<WebsocketServerResData, string>>}
+* @returns {Promise<Result<MS<MediaSoupResponse>, string>>}
 */
 async function ws_request(msg) {
   return new Promise((resolve) => {
@@ -360,36 +372,34 @@ async function producerAdded(msg) {
       return reject(r.Err)
     }
 
-    listeners.set('Consume', async (d) => {
-      /**
-      * @type {Consume['c']}
-      */
-      let consumer_data = d
+    /**
+    * @type {Consume['c']}
+    */
+    let consumer_data = r.Ok.c.c
 
-      const consumer = await consumerTransport.consume({
-        id: consumer_data.id,
-        producerId: consumer_data.producer_id,
-        kind: consumer_data.kind,
-        rtpParameters: consumer_data.rtp_parameters,
-      })
-
-      /**
-      * @type {import("client_msg").ConsumerResume}
-      */
-      const consumer_resume = {
-        t: "ConsumerResume",
-        c: consumer.id
-      }
-
-      const r = await ws_request(consumer_resume)
-      if ("Ok" in r) {
-        participants
-          .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
-        resolve(undefined);
-      } else {
-        reject(r.Err)
-      }
+    const consumer = await consumerTransport.consume({
+      id: consumer_data.id,
+      producerId: consumer_data.producer_id,
+      kind: consumer_data.kind,
+      rtpParameters: consumer_data.rtp_parameters,
     })
+
+    /**
+    * @type {import("client_msg").ConsumerResume}
+    */
+    const consumer_resume = {
+      t: "ConsumerResume",
+      c: consumer.id
+    }
+
+    const r1 = await ws_request(consumer_resume)
+    if ("Ok" in r1) {
+      participants
+        .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
+      resolve(undefined);
+    } else {
+      reject(r1.Err)
+    }
   })
 }
 
@@ -402,10 +412,10 @@ async function mediasoupHandler(msg) {
       const data = msg.c.data;
 
       if ("Ok" in data) {
-        if (data.Ok.t === "SetRoom") {
+        if (data.Ok.c.t === "SetRoom") {
           // TODO: clear?
 
-          const set_room_data = data.Ok.c;
+          const set_room_data = data.Ok.c.c;
 
           await device.load({
             routerRtpCapabilities: set_room_data.router_rtp_capabilities
@@ -426,7 +436,7 @@ async function mediasoupHandler(msg) {
 
           producerTransport = device.createSendTransport({
             ...set_room_data.producer_transport_options,
-            ...JSON.parse(ice_servers_string.Ok.c)
+            ...JSON.parse(ice_servers_string.Ok.c.c)
           })
 
           producerTransport
@@ -457,7 +467,7 @@ async function mediasoupHandler(msg) {
 
               const r = await ws_request(produce)
               if ("Ok" in r) {
-                success({ id: r.Ok.c })
+                success({ id: r.Ok.c.c })
               } else {
                 error(new Error(r.Err))
               }
@@ -484,7 +494,9 @@ async function mediasoupHandler(msg) {
           const sendPreview = document.querySelector("#preview-send")
           if (sendPreview) {
             sendPreview.srcObject = mediaStream;
-            sendPreview.play()
+            sendPreview.onloadedmetadata = () => {
+              sendPreview.play()
+            }
           }
 
           for (const track of mediaStream.getTracks()) {
@@ -554,11 +566,11 @@ async function mediasoup() {
       const data = msg.c.data;
 
       if ("Ok" in data) {
-        if (data.Ok.t !== "SetRoom") {
-          const cb = listeners.get(data.Ok.t)
+        if (data.Ok.c.t !== "SetRoom") {
+          const cb = listeners.get(data.Ok.c.t)
 
           if (cb) {
-            listeners.delete(data.Ok.t)
+            listeners.delete(data.Ok.c.t)
             cb(data)
           }
 

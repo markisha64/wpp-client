@@ -1,14 +1,11 @@
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{self, info};
-use futures_util::StreamExt;
 use tokio::sync::oneshot;
 
 use shared::api::{
     message::{CreateRequest, GetRequest},
-    websocket::{
-        MediaSoup, WebsocketClientMessageData, WebsocketServerMessage, WebsocketServerResData,
-    },
+    websocket::{MediaSoupMessage, WebsocketClientMessageData, WebsocketServerResData},
 };
 
 use crate::{components, CHATS, USER};
@@ -177,41 +174,6 @@ pub fn Home() -> Element {
         }
     });
 
-    let ms_handler = use_coroutine(
-        move |mut channel: UnboundedReceiver<WebsocketServerMessage>| async move {
-            let mut ms_js = document::eval(include_str!("../../js/mediasoup.js"));
-
-            loop {
-                tokio::select! {
-                    e = channel.select_next_some() => {
-                        let _ = ms_js.send(e);
-                    }
-                    ms_r = ms_js.recv::<MediaSoup>() => {
-                        let ms = match ms_r {
-                            Ok(ms) => ms,
-                            Err(e) => {
-                                info!("{}", e);
-                                continue;
-                            }
-                        };
-
-                        let rx = ws_request(WebsocketClientMessageData::MS(ms));
-
-                        match rx.await {
-                           Ok(data) => {
-                               let _ = ms_js.send(WebsocketServerMessage::RequestResponse { id: uuid::Uuid::nil(), data });
-                           },
-                           Err(e) => {
-                                info!("{}", e);
-                                continue;
-                           }
-                        }
-                    }
-                };
-            }
-        },
-    );
-
     let show_media = show_media_signal();
     let media_sources_class = match show_media {
         true => "",
@@ -245,12 +207,11 @@ pub fn Home() -> Element {
                                 class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700",
                                 onclick: move |_| {
                                     async move {
-                                        let res = ws_request(WebsocketClientMessageData::MS(MediaSoup::SetRoom(chat.id)));
+                                        let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::SetRoom(chat.id)));
 
                                         match res.await {
-                                            Ok(data) => {
+                                            Ok(_) => {
                                                 *show_media_signal.write() = true;
-                                                ms_handler.send(WebsocketServerMessage::RequestResponse { id: uuid::Uuid::nil(), data });
                                             },
                                             Err(e) => tracing::error!("{}", e)
                                         };
