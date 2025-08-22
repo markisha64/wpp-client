@@ -395,7 +395,7 @@ async function producerAdded(msg) {
     const r1 = await ws_request(consumer_resume)
     if ("Ok" in r1) {
       participants
-        .addTrack(consumer_data.id, consumer_data.producer_id, consumer.track);
+        .addTrack(producer_added_data.participant_id, producer_added_data.producer_id, consumer.track);
       resolve(undefined);
     } else {
       reject(r1.Err)
