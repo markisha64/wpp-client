@@ -495,6 +495,8 @@ async function mediasoupHandler(msg) {
           if (sendPreview) {
             sendPreview.srcObject = mediaStream;
             sendPreview.onloadedmetadata = () => {
+              // dunno why but didn't work how i wanted until this
+              sendPreview.muted = true
               sendPreview.play()
             }
           }
