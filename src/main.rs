@@ -3,7 +3,7 @@
 use components::navbar::Auth;
 use dioxus::document::EvalError;
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{info, Level};
+use dioxus_logger::tracing::{info, warn, Level};
 use route::Route;
 
 use gloo_timers::future::TimeoutFuture;
@@ -82,8 +82,6 @@ fn App() -> Element {
             WebsocketClientMessageData,
             oneshot::Sender<Result<WebsocketServerResData, String>>,
         )>| async move {
-            let mut ms_js = document::eval(include_str!("../js/mediasoup.js"));
-
             loop {
                 let mut message_requests: HashMap<Uuid, _> = HashMap::new();
                 let user_o = CLAIMS();
@@ -94,6 +92,8 @@ fn App() -> Element {
                         WsMeta::connect(format!("{}/ws/?jwt_token={}", BACKEND_URL_WS, token), None)
                             .await
                     {
+                        let mut ms_js = document::eval(include_str!("../js/mediasoup.js"));
+
                         let mut evts = ws.observe(ObserveConfig::default()).await.unwrap();
 
                         let chats_request_id = Uuid::new_v4();
@@ -267,6 +267,7 @@ fn App() -> Element {
                                         Err(e) => {
                                             match e {
                                                 EvalError::Finished => {
+                                                    warn!("re running document::eval");
                                                     ms_js = document::eval(include_str!("../js/mediasoup.js"));
                                                 }
                                                 e => {
