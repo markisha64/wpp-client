@@ -28,7 +28,7 @@ pub fn Home() -> Element {
     let mut rerender_signal = use_signal(|| false);
     let mut show_users_signal = use_signal(|| true);
 
-    let mut show_media_signal = use_signal(|| false);
+    let mut show_media_signal = use_signal(|| (false, None));
 
     let ws_request = move |req| -> oneshot::Receiver<_> {
         let (tx, rx) = oneshot::channel();
@@ -174,7 +174,9 @@ pub fn Home() -> Element {
         }
     });
 
-    let show_media = show_media_signal();
+    let (show_media_v, vc_chat) = show_media_signal();
+    let show_media = show_media_v && vc_chat == selected_chat_id;
+
     let media_sources_class = match show_media {
         true => "",
         false => "hidden",
@@ -212,7 +214,7 @@ pub fn Home() -> Element {
 
                                             match res.await {
                                                 Ok(_) => {
-                                                    *show_media_signal.write() = true;
+                                                    *show_media_signal.write() = (true, selected_chat_id);
                                                 },
                                                 Err(e) => tracing::error!("{}", e)
                                             };
@@ -229,7 +231,7 @@ pub fn Home() -> Element {
 
                                             match res.await {
                                                 Ok(_) => {
-                                                    *show_media_signal.write() = false;
+                                                    *show_media_signal.write() = (false, selected_chat_id);
                                                 },
                                                 Err(e) => tracing::error!("{}", e)
                                             };

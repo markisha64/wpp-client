@@ -354,9 +354,26 @@ class Participants {
 
     return newParticipant
   }
+
+  clear() {
+    for (const participant of participants.participants.values()) {
+      participant.destroy()
+    }
+
+    participants.participants.clear()
+    listeners.clear()
+
+    producerTransport.close()
+    consumerTransport.close()
+  }
 }
 
 const participants = new Participants()
+
+/**
+* @type {string}
+*/
+let room_id
 
 /**
 * @param {ProducerAdded} msg 
@@ -419,25 +436,23 @@ async function mediasoupHandler(msg) {
 
       if ("Ok" in data) {
         if (data.Ok.c.t === "LeaveRoom") {
-          for (const participant of participants.participants.values()) {
-            participant.destroy()
-          }
-
-          participants.participants.clear()
-          listeners.clear()
-
-          producerTransport.close()
-          consumerTransport.close()
+          participants.clear()
         }
 
         if (data.Ok.c.t === "SetRoom") {
-          // TODO: clear?
-
           const set_room_data = data.Ok.c.c;
 
-          await device.load({
-            routerRtpCapabilities: set_room_data.router_rtp_capabilities
-          });
+          if (room_id && room_id !== set_room_data.room_id) {
+            participants.clear()
+          }
+
+          if (!room_id) {
+            await device.load({
+              routerRtpCapabilities: set_room_data.router_rtp_capabilities
+            });
+          }
+
+          room_id = set_room_data.room_id
 
           /**
           * @type {import('./client_msg').FinishInit}
