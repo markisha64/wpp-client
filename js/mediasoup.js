@@ -233,30 +233,66 @@ class Participant {
     * @type {HTMLElement}
     */
     this.figure = document.createElement('figure', {})
-    this.figure.classList.add("flex-[0_1_320px]", "min-w-[220px]", "max-w-[360px]", "max-w-full")
+    this.figure.className = "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full rounded-xl bg-black/50"
 
     const wrapper = document.createElement("div")
-    wrapper.classList.add("relative", "rounded-xl", "overflow-hidden", "bg-black", "ring-1", "ring-white/10", "shadow-lg")
+    wrapper.className = "relative rounded-xl overflow-hidden bg-black ring-1 ring-white/10 shadow-lg"
 
     /**
     * @type {HTMLVideoElement}
     */
     this.preview = document.createElement('video')
-    this.preview.classList.add("block", "w-full", "aspect-video", "object-cover")
+    this.preview.className = "block w-full aspect-video object-cover"
     this.preview.muted = true
 
     this.preview.onloadedmetadata = () => {
       this.preview.play()
     }
 
+    const controls = document.createElement("div")
+    controls.className = "absolute inset-x-0 bottom-0 bg-black/50 backdrop-blur-sm px-3 py-1 flex items-center gap-3"
+
+    const volume = document.createElement('input')
+    volume.type = "range"
+    volume.type = "range";
+    volume.min = "0";
+    volume.max = "1";
+    volume.step = "0.01";
+    volume.value = "0.5";
+    volume.setAttribute("aria-label", "Volume");
+    volume.className = "w-full accent-blue-500";
+
+    volume.addEventListener("input", (e) => {
+      // @ts-ignore
+      this.preview.volume = Number(e.target.value)
+    })
+
+    const fullscreen = document.createElement("button")
+    fullscreen.type = "button";
+    fullscreen.setAttribute("aria-label", "Toggle fullscreen");
+    fullscreen.className =
+      "shrink-0 px-2 py-1 rounded text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30";
+    fullscreen.title = "Fullscreen";
+    fullscreen.textContent = "⤢";
+
+    fullscreen.addEventListener("click", async () => {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      } else {
+        await wrapper.requestFullscreen()
+      }
+    })
+
+    controls.append(volume, fullscreen)
+
     const figcaption = document.createElement('figcaption')
 
-    figcaption.classList.add("mt-2", "text-center", "text-sm", "text-white/70")
+    figcaption.className = "mt-2 text-center rounded-b-xl bg-black/70 text-sm text-white/70"
     figcaption.innerText = `Participant ${id}`
 
-    wrapper.append(this.preview, figcaption)
+    wrapper.append(this.preview, controls)
 
-    this.figure.append(wrapper)
+    this.figure.append(figcaption, wrapper)
 
     container.append(this.figure)
   }

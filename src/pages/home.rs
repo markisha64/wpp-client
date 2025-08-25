@@ -258,7 +258,11 @@ pub fn Home() -> Element {
                             class: "h-full w-full flex flex-wrap items-start content-start justify-center gap-4 p-4 overflow-auto",
                             id: "media-sources",
                             figure {
-                                class: "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full",
+                                class: "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full rounded-xl bg-black/50",
+                                figcaption {
+                                    class: "mt-2 text-center text-sm text-white/70",
+                                    "You"
+                                }
                                 div {
                                     class: "relative rounded-xl overflow-hidden bg-black ring-1 ring-white/10 shadow-lg",
                                     video {
@@ -266,10 +270,6 @@ pub fn Home() -> Element {
                                         id: "preview-send",
                                         muted: true,
                                         controls: false,
-                                    }
-                                    figcaption {
-                                        class: "mt-2 text-center text-sm text-white/70",
-                                        "You"
                                     }
                                 }
                             }
