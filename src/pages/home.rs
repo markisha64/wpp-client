@@ -203,21 +203,40 @@ pub fn Home() -> Element {
                             "{chat.name} ({chat.id.to_string()})"
                         }
                         div {
-                            button {
-                                class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700",
-                                onclick: move |_| {
-                                    async move {
-                                        let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::SetRoom(chat.id)));
+                            if !show_media {
+                                button {
+                                    class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700",
+                                    onclick: move |_| {
+                                        async move {
+                                            let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::SetRoom(chat.id)));
 
-                                        match res.await {
-                                            Ok(_) => {
-                                                *show_media_signal.write() = true;
-                                            },
-                                            Err(e) => tracing::error!("{}", e)
-                                        };
-                                    }
-                                },
-                                "Call"
+                                            match res.await {
+                                                Ok(_) => {
+                                                    *show_media_signal.write() = true;
+                                                },
+                                                Err(e) => tracing::error!("{}", e)
+                                            };
+                                        }
+                                    },
+                                    "Join Call"
+                                }
+                            } else {
+                                button {
+                                    class: "px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700",
+                                    onclick: move |_| {
+                                        async move {
+                                            let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::LeaveRoom));
+
+                                            match res.await {
+                                                Ok(_) => {
+                                                    *show_media_signal.write() = false;
+                                                },
+                                                Err(e) => tracing::error!("{}", e)
+                                            };
+                                        }
+                                    },
+                                    "Leave"
+                                }
                             }
                             button {
                                 class: "lg:hidden px-3 py-1 border rounded text-sm",

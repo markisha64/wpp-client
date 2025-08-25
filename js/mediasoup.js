@@ -95,7 +95,13 @@ let consumerTransport
 */
 
 /**
-* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume | FinishInit} MediaSoupResponse
+* @typedef {{
+  t: "LeaveRoom"
+}} LeaveRoom
+*/
+
+/**
+* @typedef {SetRoom | ConnectProducerTransport | Produce | ConnectConsumerTransport | Consume | ConsumerResume | FinishInit | LeaveRoom} MediaSoupResponse
 */
 
 /**
@@ -412,6 +418,18 @@ async function mediasoupHandler(msg) {
       const data = msg.c.data;
 
       if ("Ok" in data) {
+        if (data.Ok.c.t === "LeaveRoom") {
+          for (const participant of participants.participants.values()) {
+            participant.destroy()
+          }
+
+          participants.participants.clear()
+          listeners.clear()
+
+          producerTransport.close()
+          consumerTransport.close()
+        }
+
         if (data.Ok.c.t === "SetRoom") {
           // TODO: clear?
 
