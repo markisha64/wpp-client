@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use jsonwebtoken::DecodingKey;
 use shared::api::user::{AuthResponse, Claims, RegisterRequest};
 
-use crate::{components::navbar::Auth, route::Route, BACKEND_URL, CLAIMS};
+use crate::{components::navbar::Auth, route::Route, BACKEND_URL, CLAIMS, USER};
 
 pub fn Register() -> Element {
     let mut email_signal = use_signal(|| "".to_string());
@@ -16,10 +16,11 @@ pub fn Register() -> Element {
     let display_name = display_name_signal();
     let error = error_signal();
 
-    let is_logged_in = CLAIMS().is_some();
     let navigator = use_navigator();
 
     use_effect(move || {
+        let is_logged_in = CLAIMS().zip(USER()).is_some();
+
         if is_logged_in {
             navigator.replace(Route::Home);
         }
@@ -32,7 +33,7 @@ pub fn Register() -> Element {
                 class: "w-full max-w-md p-8 bg-white rounded shadow-md",
                 h1 {
                     class: "text-2xl font-bold mb-6 text-center",
-                    "Login"
+                    "Register"
                 }
                 form {
                     class: "space-y-4",
@@ -133,7 +134,7 @@ pub fn Register() -> Element {
                     button {
                         r#type: "submit",
                         class: "w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition",
-                        "Login"
+                        "Register"
                     }
                 }
                 p {

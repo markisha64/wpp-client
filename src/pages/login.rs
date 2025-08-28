@@ -14,10 +14,11 @@ pub fn Login() -> Element {
     let password = password_signal();
     let error = error_signal();
 
-    let is_logged_in = CLAIMS().zip(USER()).is_some();
     let navigator = use_navigator();
 
     use_effect(move || {
+        let is_logged_in = CLAIMS().zip(USER()).is_some();
+
         if is_logged_in {
             navigator.replace(Route::Home);
         }
