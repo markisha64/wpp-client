@@ -287,8 +287,13 @@ class Participant {
 
     const figcaption = document.createElement('figcaption')
 
-    figcaption.className = "mt-2 text-center rounded-b-xl bg-black/70 text-sm text-white/70"
-    figcaption.innerText = `Participant ${id}`
+    /**
+    * @type {Record<string, string>}
+    */
+    const users = JSON.parse(document.getElementById("media-sources")?.dataset.users || "{}")
+
+    figcaption.className = "mt-2 text-center text-sm text-white/70"
+    figcaption.innerText = users?.[id] || "Unknown"
 
     wrapper.append(this.preview, controls)
 

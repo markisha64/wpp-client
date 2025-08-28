@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bson::oid::ObjectId;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{self, info};
@@ -46,7 +48,15 @@ pub fn Home() -> Element {
     let selected_chat = chats
         .iter()
         .find(|x| Some(x.id) == selected_chat_id)
-        .map(|x| x.clone());
+        .map(|x| {
+            (
+                x.clone(),
+                x.users
+                    .iter()
+                    .map(|x| (x.id.to_string(), x.display_name.clone()))
+                    .collect::<HashMap<_, _>>(),
+            )
+        });
 
     let _ = use_resource(move || async move {
         // dependant signals
@@ -195,7 +205,7 @@ pub fn Home() -> Element {
                 selected_chat_id_signal,
                 update_height_signal
             },
-            if let Some(chat) = selected_chat {
+            if let Some((chat, user_map)) = selected_chat {
                 main {
                     class: "flex-1 flex flex-col",
                     div {
@@ -209,12 +219,22 @@ pub fn Home() -> Element {
                                 button {
                                     class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700",
                                     onclick: move |_| {
+                                        to_owned![user_map];
+
                                         async move {
                                             let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::SetRoom(chat.id)));
 
                                             match res.await {
                                                 Ok(_) => {
                                                     *show_media_signal.write() = (true, selected_chat_id);
+
+                                                    let js = document::eval(r"
+                                                        const value = await dioxus.recv()
+
+                                                        document.getElementById('media-sources').dataset.users = JSON.stringify(value)
+                                                    ");
+
+                                                    let _ = js.send(user_map);
                                                 },
                                                 Err(e) => tracing::error!("{}", e)
                                             };
@@ -281,7 +301,7 @@ pub fn Home() -> Element {
                             update_height_signal.set(UpdateHeight::CheckNeed);
                         },
                         id: "chat-messages",
-                        for message in chat.messages {
+                        for message in &chat.messages {
                             div {
                                 class: "flex items-start gap-3",
                                 if let Some(creator) = message.creator {
