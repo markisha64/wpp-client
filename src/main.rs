@@ -159,32 +159,6 @@ fn App() -> Element {
                                                     USER.write().replace(user);
                                                 }
 
-                                                Ok(WebsocketServerResData::NewMessage(message)) => {
-                                                    let chats = &mut (*CHATS.write());
-                                                    let chat_o = chats
-                                                        .iter_mut()
-                                                        .find(|x| x.id == message.chat_id);
-
-                                                    if let Some(chat) = chat_o {
-                                                        let ts = message.created_at;
-
-                                                        chat.messages.push(message.clone());
-                                                        chat.last_message_ts = ts;
-                                                    }
-
-                                                    chats.sort_by(|a, b| {
-                                                        a.last_message_ts
-                                                            .cmp(&b.last_message_ts)
-                                                            .reverse()
-                                                    });
-
-                                                    if let Some(x) =
-                                                        message_requests.remove(&id)
-                                                    {
-                                                        let _ = x.send(Ok(WebsocketServerResData::NewMessage(message)));
-                                                    }
-                                                }
-
                                                 Ok(WebsocketServerResData::MS(media_soup)) => {
                                                     let _ = ms_js.send(WebsocketServerMessage::RequestResponse {
                                                         id,
@@ -208,10 +182,6 @@ fn App() -> Element {
                                             },
 
                                             WebsocketServerMessage::NewMessage(message) => {
-                                                if message.creator == Some(user_id) {
-                                                    continue;
-                                                }
-
                                                 let chats = &mut (*CHATS.write());
                                                 let chat_o = chats
                                                     .iter_mut()
