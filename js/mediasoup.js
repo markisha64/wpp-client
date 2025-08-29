@@ -243,7 +243,6 @@ class Participant {
     */
     this.preview = document.createElement('video')
     this.preview.className = "block w-full aspect-video object-cover"
-    this.preview.muted = true
 
     this.preview.onloadedmetadata = () => {
       this.preview.play()
@@ -254,7 +253,6 @@ class Participant {
 
     const volume = document.createElement('input')
     volume.type = "range"
-    volume.type = "range";
     volume.min = "0";
     volume.max = "1";
     volume.step = "0.01";
