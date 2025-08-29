@@ -27,7 +27,6 @@ pub fn Home() -> Element {
         oneshot::Sender<Result<WebsocketServerResData, String>>,
     )>();
     let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
-    let mut rerender_signal = use_signal(|| false);
     let mut show_users_signal = use_signal(|| true);
 
     let mut show_media_signal = use_signal(|| (false, None));
@@ -58,130 +57,130 @@ pub fn Home() -> Element {
             )
         });
 
-    let _ = use_resource(move || async move {
+    let _ = use_effect(move || {
         // dependant signals
         let chats = CHATS();
         let user_o = USER();
         let selected_chat_id = selected_chat_id_signal();
         let update_height = update_height_signal();
-        let rerender = rerender_signal();
 
-        let selected_chat = chats.into_iter().find(|x| Some(x.id) == selected_chat_id);
+        spawn(async move {
+            let selected_chat = chats.into_iter().find(|x| Some(x.id) == selected_chat_id);
 
-        if let Some(user) = user_o {
-            if let Some(chat) = selected_chat {
-                let mut eval = document::eval(
-                    r#"
+            if let Some(user) = user_o {
+                if let Some(chat) = selected_chat {
+                    let mut eval = document::eval(
+                        r#"
 
-                    const elt = document.getElementById("chat-messages")
-                    const v = elt.scrollTop
-                    const scroll_height = elt.scrollHeight
+                        const elt = document.getElementById("chat-messages")
+                        const v = elt.scrollTop
+                        const scroll_height = elt.scrollHeight
 
-                    dioxus.send(v);
-                    dioxus.send(scroll_height)
-                     
-                    "#,
-                );
+                        dioxus.send(v);
+                        dioxus.send(scroll_height)
+         
+                        "#,
+                    );
 
-                let scroll_top_v = eval.recv::<f64>().await.unwrap();
-                let current_height = eval.recv::<f64>().await.unwrap();
+                    let scroll_top_v = eval.recv::<f64>().await.unwrap();
+                    let current_height = eval.recv::<f64>().await.unwrap();
 
-                let scroll_top = scroll_top_v <= 1.0;
-                let scroll_bottom = (current_height - scroll_top_v) < 1.0;
+                    let scroll_top = scroll_top_v <= 1.0;
+                    let scroll_bottom = (current_height - scroll_top_v) < 1.0;
 
-                match update_height {
-                    UpdateHeight::CheckNeed => {
-                        // check if need update
-                        if !scroll_top {
-                            return;
-                        }
+                    match update_height {
+                        UpdateHeight::CheckNeed => {
+                            // check if need update
+                            if !scroll_top {
+                                return;
+                            }
 
-                        if scroll_bottom {
-                            if let Some(chat_user) = chat.users.iter().find(|x| x.id == user.id) {
-                                if chat_user.last_message_seen_ts != chat.last_message_ts {
-                                    let _ = ws_request(WebsocketClientMessageData::SetChatRead(
-                                        chat.id,
-                                    ))
-                                    .await;
+                            if scroll_bottom {
+                                if let Some(chat_user) = chat.users.iter().find(|x| x.id == user.id)
+                                {
+                                    if chat_user.last_message_seen_ts != chat.last_message_ts {
+                                        let _ = ws_request(
+                                            WebsocketClientMessageData::SetChatRead(chat.id),
+                                        )
+                                        .await;
+                                    }
                                 }
                             }
-                        }
 
-                        let ts = chat.messages.get(0).map(|x| x.created_at);
+                            let ts = chat.messages.get(0).map(|x| x.created_at);
 
-                        let rx = ws_request(WebsocketClientMessageData::GetMessages(GetRequest {
-                            chat_id: chat.id,
-                            last_message_ts: ts,
-                        }));
+                            let rx =
+                                ws_request(WebsocketClientMessageData::GetMessages(GetRequest {
+                                    chat_id: chat.id,
+                                    last_message_ts: ts,
+                                }));
 
-                        let mut messages = match rx.await {
-                            Ok(data) => match data {
-                                Ok(WebsocketServerResData::GetMessages(messages)) => messages,
+                            let mut messages = match rx.await {
+                                Ok(data) => match data {
+                                    Ok(WebsocketServerResData::GetMessages(messages)) => messages,
+                                    Err(e) => {
+                                        info!("{}", e);
+
+                                        Vec::new()
+                                    }
+                                    _ => Vec::new(),
+                                },
+
                                 Err(e) => {
                                     info!("{}", e);
 
                                     Vec::new()
                                 }
-                                _ => Vec::new(),
-                            },
+                            };
 
-                            Err(e) => {
-                                info!("{}", e);
-
-                                Vec::new()
+                            if messages.len() == 0 {
+                                return;
                             }
-                        };
 
-                        if messages.len() == 0 {
-                            return;
+                            let mut chats = CHATS.write();
+                            let chat_o = chats.iter_mut().find(|x| x.id == chat.id);
+
+                            if let Some(chat_m) = chat_o {
+                                messages.extend(chat.messages.into_iter());
+                                chat_m.messages = messages;
+                                update_height_signal.set(UpdateHeight::GoTo(current_height));
+                            }
                         }
-
-                        let mut chats = CHATS.write();
-                        let chat_o = chats.iter_mut().find(|x| x.id == chat.id);
-
-                        if let Some(chat_m) = chat_o {
-                            messages.extend(chat.messages.into_iter());
-                            chat_m.messages = messages;
-                            update_height_signal.set(UpdateHeight::GoTo(current_height));
-                        }
-                    }
-                    UpdateHeight::GoDown => {
-                        if rerender {
+                        UpdateHeight::GoDown => {
                             let _ = document::eval(
                                 r#"
 
-                            const elt = document.getElementById("chat-messages")
-                            elt.scrollTop = elt.scrollHeight
-         
-                            "#,
+                                const elt = document.getElementById("chat-messages")
+                                elt.scrollTop = elt.scrollHeight
+     
+                                "#,
                             )
                             .await;
 
                             update_height_signal.set(UpdateHeight::CheckNeed);
-                            rerender_signal.set(false);
                         }
-                    }
-                    UpdateHeight::GoTo(old_height) => {
-                        let _ = document::eval(
-                            format!(
-                                r#"
+                        UpdateHeight::GoTo(old_height) => {
+                            let _ = document::eval(
+                                format!(
+                                    r#"
 
-                                const elt = document.getElementById("chat-messages")
-                                elt.scrollTop = {}
-                                console.log(elt.scrollTop)
+                                    const elt = document.getElementById("chat-messages")
+                                    elt.scrollTop = {}
+                                    console.log(elt.scrollTop)
                      
-                                "#,
-                                current_height - old_height
+                                    "#,
+                                    current_height - old_height
+                                )
+                                .as_str(),
                             )
-                            .as_str(),
-                        )
-                        .await;
+                            .await;
 
-                        update_height_signal.set(UpdateHeight::CheckNeed);
+                            update_height_signal.set(UpdateHeight::CheckNeed);
+                        }
                     }
                 }
             }
-        }
+        });
     });
 
     let (show_media_v, vc_chat) = show_media_signal();
@@ -195,8 +194,6 @@ pub fn Home() -> Element {
         true => "basis-[40%]",
         false => "flex-1",
     };
-
-    rerender_signal.set(true);
 
     rsx! {
         div {
@@ -365,7 +362,7 @@ pub fn Home() -> Element {
                                     let _ =  ws_request(WebsocketClientMessageData::NewMessage(CreateRequest {
                                         chat_id: selected_chat_id.unwrap(),
                                         content: current_message
-                                    })).await.unwrap();
+                                    })).await;
 
                                     update_height_signal.set(UpdateHeight::GoDown);
 
