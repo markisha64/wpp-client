@@ -166,7 +166,6 @@ pub fn Home() -> Element {
 
                                     const elt = document.getElementById("chat-messages")
                                     elt.scrollTop = {}
-                                    console.log(elt.scrollTop)
                      
                                     "#,
                                     current_height - old_height
