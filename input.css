@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Fade in with green border */
 @keyframes fadeInGreenBorder {
   0% {
     border-color: transparent;
@@ -15,7 +14,6 @@
   animation: fadeInGreenBorder 0.5s ease-in-out forwards;
 }
 
-/* Fade in with green border */
 @keyframes fadeOutGreenBorder {
   0% {
     border-color: green;
@@ -28,4 +26,19 @@
 
 .animate-fadeOutGreenBorder {
   animation: fadeOutGreenBorder 0.5s ease-in-out forwards;
+}
+
+
+@keyframes copyCodeSuccess {
+  0% {}
+
+  50% {
+    background-color: var(--color-green-600);
+  }
+
+  100% {}
+}
+
+.animate-copyCodeSuccess {
+  animation: copyCodeSuccess 1s ease-in-out forwards;
 }

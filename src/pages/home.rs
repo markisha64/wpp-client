@@ -208,12 +208,12 @@ pub fn Home() -> Element {
                         class: "flex items-center justify-between p-4 border-b bg-white",
                         div {
                             class: "font-bold text-lg",
-                            "{chat.name} ({chat.id.to_string()})"
+                            "{chat.name}"
                         }
                         div {
                             if !show_media {
                                 button {
-                                    class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700",
+                                    class: "px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 m-2",
                                     onclick: move |_| {
                                         to_owned![user_map];
 
@@ -257,7 +257,7 @@ pub fn Home() -> Element {
                                 }
                             }
                             button {
-                                class: "lg:hidden px-3 py-1 border rounded text-sm",
+                                class: "lg:hidden px-3 py-1 border rounded text-sm m-2",
                                 onclick: move |_| {
                                     show_users_signal.set(!show_users);
                                 },
@@ -265,6 +265,25 @@ pub fn Home() -> Element {
                                     true => "Hide Users",
                                     false => "Show Users"
                                 }
+                            }
+                            button {
+                                class: "px-3 py-1 border rounded text-sm bg-gray-200 hover:bg-gray-100 m-2",
+                                id: "copy-code-button",
+                                onclick: move |_| {
+                                    let eval = document::eval(r#"
+                                        const msg = await dioxus.recv();   
+
+                                        await navigator.clipboard.writeText(msg);
+
+                                        // const elt = document.getElementById("copy-code-button")
+
+                                        // elt.classList.remove("animate-copyCodeSuccess")
+                                        // elt.classList.add("animate-copyCodeSuccess")
+                                    "#);
+
+                                    let _ = eval.send(chat.id.to_string());
+                                },
+                                "Copy Code"
                             }
                         }
                     },
