@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+/* Fade in with green border */
+@keyframes fadeInGreenBorder {
+  0% {
+    border-color: transparent;
+  }
+
+  100% {
+    border-color: green;
+  }
+}
+
+.animate-fadeInGreenBorder {
+  animation: fadeInGreenBorder 0.5s ease-in-out forwards;
+}
+
+/* Fade in with green border */
+@keyframes fadeOutGreenBorder {
+  0% {
+    border-color: green;
+  }
+
+  100% {
+    border-color: transparent;
+  }
+}
+
+.animate-fadeOutGreenBorder {
+  animation: fadeOutGreenBorder 0.5s ease-in-out forwards;
+}

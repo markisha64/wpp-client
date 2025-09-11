@@ -233,7 +233,7 @@ class Participant {
     * @type {HTMLElement}
     */
     this.figure = document.createElement('figure', {})
-    this.figure.className = "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full rounded-xl bg-black/50"
+    this.figure.className = "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full rounded-xl bg-black/50 border-2 border-solid border-transparent"
 
     const wrapper = document.createElement("div")
     wrapper.className = "relative rounded-xl overflow-hidden bg-black ring-1 ring-white/10 shadow-lg"
@@ -246,6 +246,42 @@ class Participant {
 
     this.preview.onloadedmetadata = () => {
       this.preview.play()
+
+      const audioContext = new AudioContext()
+      const audioSource = audioContext.createMediaStreamSource(this.mediaStream)
+      const analyser = audioContext.createAnalyser()
+
+      analyser.fftSize = 512
+      audioSource.connect(analyser)
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      let lastSpokeTime = 0;
+      let speaking_state = false
+
+      const detectSpech = () => {
+        analyser.getByteFrequencyData(dataArray)
+
+        const avg = dataArray.reduce((a, b) => a + b, 0)
+        const now = Date.now()
+
+        if (avg > 20) {
+          lastSpokeTime = now;
+
+          if (!speaking_state) {
+            speaking_state = true;
+            this.figure.classList.remove("animate-fadeOutGreenBorder", "animate-fadeInGreenBorder")
+            this.figure.classList.add("animate-fadeInGreenBorder")
+          }
+        } else if (now - lastSpokeTime > 600 && speaking_state) {
+          speaking_state = false;
+          this.figure.classList.remove("animate-fadeOutGreenBorder", "animate-fadeInGreenBorder")
+          this.figure.classList.add("animate-fadeOutGreenBorder")
+        }
+
+        requestAnimationFrame(detectSpech)
+      }
+
+      detectSpech()
     }
 
     const controls = document.createElement("div")
@@ -296,6 +332,7 @@ class Participant {
     wrapper.append(this.preview, controls)
 
     this.figure.append(figcaption, wrapper)
+
 
     container.append(this.figure)
   }
