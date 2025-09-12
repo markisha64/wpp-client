@@ -291,18 +291,28 @@ pub fn Home() -> Element {
                     div {
                         class: "basis-[60%] bg-gray-800 text-white overflow-hidden {media_sources_class}",
                         div {
-                            class: "h-full w-full flex flex-wrap items-start content-start justify-center gap-4 p-4 overflow-auto",
+                            class: "h-full w-full grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))] auto-rows-max items-start justify-items-center gap-2 md:gap-4 p-4 overflow-auto",
                             id: "media-sources",
                             figure {
-                                class: "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full rounded-xl bg-black/50",
+                                class: "w-full max-w-[480px] min-w-0 rounded-xl bg-black/50",
                                 figcaption {
                                     class: "mt-2 text-center text-sm text-white/70",
                                     "You"
                                 }
                                 div {
                                     class: "relative rounded-xl overflow-hidden bg-black ring-1 ring-white/10 shadow-lg",
+                                    div {
+                                        class: "absolute inset-0 z-0 flex items-center justify-center text-white/60 select-none pointer-events-none",
+                                        svg {
+                                            class: "w-16 h-16 md:w-20 md:h-20",
+                                            xmlns: "http://www.w3.org/2000/svg",
+                                            view_box: "0 0 24 24",
+                                            fill: "currentColor",
+                                            path { d: "M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z" }
+                                        }
+                                    }
                                     video {
-                                        class: "block w-full aspect-video object-cover",
+                                        class: "relative z-10 block w-full aspect-video object-cover",
                                         id: "preview-send",
                                         muted: true,
                                         controls: false,

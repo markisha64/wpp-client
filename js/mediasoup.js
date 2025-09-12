@@ -233,16 +233,30 @@ class Participant {
     * @type {HTMLElement}
     */
     this.figure = document.createElement('figure', {})
-    this.figure.className = "flex-[0_1_320px] min-w-[220px] max-w-[360px] max-w-full rounded-xl bg-black/50 border-2 border-solid border-transparent"
+    this.figure.className = "w-full max-w-[480px] min-w-0 rounded-xl bg-black/50 border-2 border-solid border-transparent"
 
     const wrapper = document.createElement("div")
     wrapper.className = "relative rounded-xl overflow-hidden bg-black ring-1 ring-white/10 shadow-lg"
+
+    const placeholderDiv = document.createElement("div")
+    placeholderDiv.className = "absolute inset-0 z-0 flex items-center justify-center text-white/60 select-none pointer-events-none"
+
+    const placeholder = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    placeholder.setAttribute("class", "w-16 h-16 md:w-20 md:h-20")
+    placeholder.setAttribute("viewBox", "0 0 24 24")
+    placeholder.setAttribute("fill", "currentColor")
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+    path.setAttribute("d", "M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z")
+
+    placeholder.appendChild(path)
+    placeholderDiv.append(placeholder)
 
     /**
     * @type {HTMLVideoElement}
     */
     this.preview = document.createElement('video')
-    this.preview.className = "block w-full aspect-video object-cover"
+    this.preview.className = "relative z-10 block w-full aspect-video object-cover"
 
     this.preview.onloadedmetadata = () => {
       this.preview.play()
@@ -329,7 +343,7 @@ class Participant {
     figcaption.className = "mt-2 text-center text-sm text-white/70"
     figcaption.innerText = users?.[id] || "Unknown"
 
-    wrapper.append(this.preview, controls)
+    wrapper.append(placeholderDiv, this.preview, controls)
 
     this.figure.append(figcaption, wrapper)
 
