@@ -88,11 +88,18 @@ pub fn Sidebar(
                 },
                 if logged_in {
                     li {
-                        class: "px-4 py-3 cursor-pointer hover:bg-blue-50",
+                        class: "px-4 py-3 cursor-pointer hover:bg-blue-50 flex items-center justify-center",
                         onclick: move |_| {
                             new_modal_signal.set(true);
                         },
-                        "Create/Join Chat"
+                        svg {
+                            class: "w-5 h-5 text-blue-600",
+                            xmlns: "http://www.w3.org/2000/svg",
+                            view_box: "0 0 24 24",
+                            fill: "none",
+                            aria_label: "Create or join chat",
+                            path { d: "M12 5v14M5 12h14", stroke: "currentColor", stroke_width: "2", stroke_linecap: "round", stroke_linejoin: "round" }
+                        }
                     }
                 }
             },
