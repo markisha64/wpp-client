@@ -238,23 +238,6 @@ pub fn Home() -> Element {
                                     },
                                     "Join Call"
                                 }
-                            } else {
-                                button {
-                                    class: "px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700",
-                                    onclick: move |_| {
-                                        async move {
-                                            let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::LeaveRoom));
-
-                                            match res.await {
-                                                Ok(_) => {
-                                                    *show_media_signal.write() = (false, selected_chat_id);
-                                                },
-                                                Err(e) => tracing::error!("{}", e)
-                                            };
-                                        }
-                                    },
-                                    "Leave"
-                                }
                             }
                             button {
                                 class: "lg:hidden px-3 py-1 border rounded text-sm m-2",
@@ -316,6 +299,64 @@ pub fn Home() -> Element {
                                         id: "preview-send",
                                         muted: true,
                                         controls: false,
+                                    }
+                                }
+                            }
+                        }
+                        // Controls bar moved to parent container (outside of #media-sources)
+                        div {
+                            class: "sticky bottom-0 w-full flex justify-center mt-2",
+                            div {
+                                class: "flex items-center gap-3 p-2 rounded-full bg-black/40 backdrop-blur ring-1 ring-white/10",
+                                // Leave Call
+                                button {
+                                    class: "w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow",
+                                    aria_label: "Leave call",
+                                    onclick: move |_| {
+                                        async move {
+                                            let res = ws_request(WebsocketClientMessageData::MS(MediaSoupMessage::LeaveRoom));
+
+                                            match res.await {
+                                                Ok(_) => {
+                                                    *show_media_signal.write() = (false, selected_chat_id);
+                                                },
+                                                Err(e) => tracing::error!("{}", e)
+                                            };
+                                        }
+                                    },
+                                    svg {
+                                        class: "w-6 h-6",
+                                        xmlns: "http://www.w3.org/2000/svg",
+                                        view_box: "0 0 24 24",
+                                        fill: "currentColor",
+                                        path { d: "M3.51 14.88c-.31-.31-.48-.74-.48-1.18 0-.45.18-.88.5-1.19 4.55-4.51 11.9-4.51 16.45 0 .32.31.5.74.5 1.19 0 .44-.17.87-.48 1.18l-1.24 1.24c-.66.66-1.73.62-2.34-.1l-1.02-1.21c-.51-.6-.56-1.47-.12-2.12l.23-.35c-2.33-.94-4.97-.94-7.3 0l.23.35c.44.65.39 1.52-.12 2.12l-1.02 1.21c-.61.72-1.68.76-2.34.1L3.51 14.88z" }
+                                    }
+                                }
+                                // Mute/Unmute
+                                button {
+                                    class: "w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center shadow",
+                                    aria_label: "Mute microphone",
+                                    onclick: move |_| {
+                                    },
+                                    svg {
+                                        class: "w-6 h-6",
+                                        xmlns: "http://www.w3.org/2000/svg",
+                                        view_box: "0 0 24 24",
+                                        fill: "currentColor",
+                                        path { d: "M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z" }
+                                    }
+                                }
+                                // Hide/Show Video
+                                button {
+                                    class: "w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center shadow",
+                                    aria_label: "Hide video",
+                                    onclick: move |_| {},
+                                    svg {
+                                        class: "w-6 h-6",
+                                        xmlns: "http://www.w3.org/2000/svg",
+                                        view_box: "0 0 24 24",
+                                        fill: "currentColor",
+                                        path { d: "M2.81 2.81 1.39 4.22l3.03 3.03C3.57 8.32 2.27 9.58 1 11c2.73 3.18 6.11 5 11 5 1.47 0 2.82-.18 4.04-.51l3.74 3.74 1.41-1.41L2.81 2.81zM12 8c1.1 0 2 .9 2 2 0 .36-.1.69-.27.98l-2.71-2.71c.29-.17.62-.27.98-.27zm9-2-5 3v2.09l-2-2V7c0-1.1-.9-2-2-2-1.09 0-1.99.89-2 1.98V7.1l-1.94-1.94C8.77 3.88 10.25 3 12 3c2.76 0 5 2.24 5 5v.18L21 11V6z" }
                                     }
                                 }
                             }
