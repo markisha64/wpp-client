@@ -27,7 +27,7 @@ pub fn Home() -> Element {
         oneshot::Sender<Result<WebsocketServerResData, String>>,
     )>();
     let mut update_height_signal = use_signal(|| UpdateHeight::CheckNeed);
-    let mut show_users_signal = use_signal(|| true);
+    let mut show_users_signal = use_signal(|| false);
 
     let mut show_media_signal = use_signal(|| (false, None));
 
@@ -303,12 +303,10 @@ pub fn Home() -> Element {
                                 }
                             }
                         }
-                        // Controls bar moved to parent container (outside of #media-sources)
                         div {
                             class: "sticky bottom-0 z-30 w-full flex justify-center mt-2",
                             div {
                                 class: "flex items-center gap-3 p-2 rounded-full bg-black/40 backdrop-blur ring-1 ring-white/10",
-                                // Leave Call
                                 button {
                                     class: "w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow",
                                     aria_label: "Leave call",
@@ -332,7 +330,6 @@ pub fn Home() -> Element {
                                         path { d: "M3.51 14.88c-.31-.31-.48-.74-.48-1.18 0-.45.18-.88.5-1.19 4.55-4.51 11.9-4.51 16.45 0 .32.31.5.74.5 1.19 0 .44-.17.87-.48 1.18l-1.24 1.24c-.66.66-1.73.62-2.34-.1l-1.02-1.21c-.51-.6-.56-1.47-.12-2.12l.23-.35c-2.33-.94-4.97-.94-7.3 0l.23.35c.44.65.39 1.52-.12 2.12l-1.02 1.21c-.61.72-1.68.76-2.34.1L3.51 14.88z" }
                                     }
                                 }
-                                // Mute/Unmute
                                 button {
                                     class: "w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center shadow",
                                     aria_label: "Mute microphone",
@@ -346,7 +343,6 @@ pub fn Home() -> Element {
                                         path { d: "M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z" }
                                     }
                                 }
-                                // Hide/Show Video
                                 button {
                                     class: "w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center shadow",
                                     aria_label: "Hide video",
