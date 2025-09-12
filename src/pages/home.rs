@@ -272,7 +272,7 @@ pub fn Home() -> Element {
                         }
                     },
                     div {
-                        class: "basis-[60%] bg-gray-800 text-white overflow-hidden {media_sources_class}",
+                        class: "basis-[60%] relative bg-gray-800 text-white overflow-hidden {media_sources_class}",
                         div {
                             class: "h-full w-full grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))] auto-rows-max items-start justify-items-center gap-2 md:gap-4 p-4 overflow-auto",
                             id: "media-sources",
@@ -305,7 +305,7 @@ pub fn Home() -> Element {
                         }
                         // Controls bar moved to parent container (outside of #media-sources)
                         div {
-                            class: "sticky bottom-0 w-full flex justify-center mt-2",
+                            class: "sticky bottom-0 z-30 w-full flex justify-center mt-2",
                             div {
                                 class: "flex items-center gap-3 p-2 rounded-full bg-black/40 backdrop-blur ring-1 ring-white/10",
                                 // Leave Call
