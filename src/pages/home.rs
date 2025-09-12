@@ -275,10 +275,11 @@ pub fn Home() -> Element {
 
                                         await navigator.clipboard.writeText(msg);
 
-                                        // const elt = document.getElementById("copy-code-button")
+                                        const elt = document.getElementById("copy-code-button")
 
-                                        // elt.classList.remove("animate-copyCodeSuccess")
-                                        // elt.classList.add("animate-copyCodeSuccess")
+                                        elt.classList.remove("animate-copyCodeSuccess")
+                                        void elt.offsetWidth;
+                                        elt.classList.add("animate-copyCodeSuccess")
                                     "#);
 
                                     let _ = eval.send(chat.id.to_string());
