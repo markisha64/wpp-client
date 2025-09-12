@@ -332,8 +332,29 @@ pub fn Home() -> Element {
                                 }
                                 button {
                                     class: "w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center shadow",
+                                    id: "audio-button",
                                     aria_label: "Mute microphone",
                                     onclick: move |_| {
+                                        document::eval(r#"
+                                            const elt = document.getElementById("preview-send")   
+                                            const audioButton = document.getElementById("audio-button")
+
+                                            if (elt) {
+                                                const audioEnabled = elt.srcObject.getAudioTracks()[0].enabled
+
+                                                if (audioEnabled) {
+                                                    elt.srcObject.getAudioTracks()[0].enabled = false
+
+                                                    audioButton.classList.remove("bg-gray-700", "hover:bg-gray-600")
+                                                    audioButton.classList.add("bg-red-600", "hover:bg-red-700")
+                                                } else {
+                                                    elt.srcObject.getAudioTracks()[0].enabled = true
+
+                                                    audioButton.classList.remove("bg-red-600", "hover:bg-red-700")
+                                                    audioButton.classList.add("bg-gray-700", "hover:bg-gray-600")
+                                                }
+                                            }
+                                        "#);
                                     },
                                     svg {
                                         class: "w-6 h-6",
@@ -345,8 +366,30 @@ pub fn Home() -> Element {
                                 }
                                 button {
                                     class: "w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center shadow",
+                                    id: "video-button",
                                     aria_label: "Hide video",
-                                    onclick: move |_| {},
+                                    onclick: move |_| {
+                                        document::eval(r#"
+                                            const elt = document.getElementById("preview-send")   
+                                            const videoButton = document.getElementById("video-button")
+
+                                            if (elt) {
+                                                const videoEnabled = elt.srcObject.getVideoTracks()[0].enabled
+
+                                                if (videoEnabled) {
+                                                    elt.srcObject.getVideoTracks()[0].enabled = false
+
+                                                    videoButton.classList.remove("bg-gray-700", "hover:bg-gray-600")
+                                                    videoButton.classList.add("bg-red-600", "hover:bg-red-700")
+                                                } else {
+                                                    elt.srcObject.getVideoTracks()[0].enabled = true
+
+                                                    videoButton.classList.remove("bg-red-600", "hover:bg-red-700")
+                                                    videoButton.classList.add("bg-gray-700", "hover:bg-gray-600")
+                                                }
+                                            }
+                                        "#);
+                                    },
                                     svg {
                                         class: "w-6 h-6",
                                         xmlns: "http://www.w3.org/2000/svg",
