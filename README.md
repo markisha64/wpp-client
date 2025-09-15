@@ -1,10 +1,12 @@
 # WPP Client
 
 WPPClient je klijentski dio fullstack aplikacije za real-time komunikaciju
-pomoću WebSocketa (poruke i signalizacija) i WebRTC (video pozivi).
+pomoću [WebSocketa](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+(poruke i signalizacija) i [WebRTC](https://webrtc.org/) (video pozivi).
 Izgrađen je pomoću [Dioxsus](https://dioxuslabs.com/) web frameworka radi
-lakše poveznosti sa poslužiteljom (jedan od dependancy je wpp-server/shared
-koji sadrži definicije strukture zahtjeva i odgovora).
+lakše poveznosti sa poslužiteljom (jedan od dependancy je
+[wpp-server](https://github.com/markisha64/wpp-server)/shared koji sadrži
+definicije strukture zahtjeva i odgovora).
 
 ## Build Requirements
 
