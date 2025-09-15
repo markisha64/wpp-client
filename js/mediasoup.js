@@ -517,6 +517,17 @@ async function producerAdded(msg) {
 }
 
 /**
+* @type {{
+  audio: MediaStream | null
+  video: MediaStream | null
+}}
+*/
+const tracks = {
+  audio: null,
+  video: null
+}
+
+/**
 * @param {WebsocketServerMessage} msg 
 */
 async function mediasoupHandler(msg) {
@@ -596,36 +607,59 @@ async function mediasoupHandler(msg) {
               }
             })
 
-          const mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: {
-              width: {
-                ideal: 1280
-              },
-              height: {
-                ideal: 720
-              },
-              frameRate: {
-                ideal: 60
+          try {
+            tracks.audio = await navigator.mediaDevices.getUserMedia({
+              audio: true
+            })
+          } catch { }
+
+          try {
+            tracks.video = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: {
+                  ideal: 1280
+                },
+                height: {
+                  ideal: 720
+                },
+                frameRate: {
+                  ideal: 60
+                }
               }
-            }
-          })
+            })
+          } catch { }
+
 
           /**
           * @type {HTMLVideoElement | null}
           */
           const sendPreview = document.querySelector("#preview-send")
           if (sendPreview) {
-            sendPreview.srcObject = mediaStream;
+            const spms = new MediaStream()
+
+            sendPreview.srcObject = spms;
             sendPreview.onloadedmetadata = () => {
               // dunno why but didn't work how i wanted until this
               sendPreview.muted = true
               sendPreview.play()
             }
+
+            if (tracks.audio) {
+              spms.addTrack(tracks.audio.getTracks()[0])
+            }
+
+            if (tracks.video) {
+              spms.addTrack(tracks.video.getTracks()[0])
+            }
           }
 
-          for (const track of mediaStream.getTracks()) {
-            await producerTransport.produce({ track })
+
+          if (tracks.audio) {
+            await producerTransport.produce({ track: tracks.audio.getTracks()[0] })
+          }
+
+          if (tracks.video) {
+            await producerTransport.produce({ track: tracks.video.getTracks()[0] })
           }
 
           consumerTransport = device.createRecvTransport(set_room_data.consumer_transport_options)
