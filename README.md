@@ -5,7 +5,7 @@ pomoću [WebSocketa](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets
 (poruke i signalizacija) i [WebRTC](https://webrtc.org/) (video pozivi).
 Izgrađen je pomoću [Dioxsus](https://dioxuslabs.com/) web frameworka radi
 lakše poveznosti sa poslužiteljom (jedan od dependancy je
-[wpp-server](https://github.com/markisha64/wpp-server)/shared koji sadrži
+[wpp-server/shared](https://github.com/markisha64/wpp-server/tree/main/shared) koji sadrži
 definicije strukture zahtjeva i odgovora).
 
 ## Build Requirements
