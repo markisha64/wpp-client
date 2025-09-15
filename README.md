@@ -1,25 +1,38 @@
 # WPP Client
 
-# Requirements
+WPPClient je klijentski dio fullstack aplikacije za real-time komunikaciju
+pomoću WebSocketa (poruke i signalizacija) i WebRTC (video pozivi).
+Izgrađen je pomoću [Dioxsus](https://dioxuslabs.com/) web frameworka radi
+lakše poveznosti sa poslužiteljom (jedan od dependancy je wpp-server/shared
+koji sadrži definicije strukture zahtjeva i odgovora).
 
-- nodejs and npm
-- rust 1.85^
+## Build Requirements
 
-# Development
+Prije no što možeš build-ati cijeli projekt, moraš instalirati neke alate.
+Treba ti [Nodejs i NPM](https://nodejs.org/en) i [Rust](https://www.rust-lang.org/) (verzija 1.85 ili veća).
 
-Install nodejs dependencies:
+## Building
+
+Nodejs paketi
 
 ```shell
 npm ci
 ```
 
-Run the following command in the root of the project to start the tailwind CSS compiler:
+Kompilacija CSS-a
 
 ```shell
 npx tailwindcss -i ./input.css -o ./assets/tailwind.css --watch
 ```
 
-Bind backend addresses
+Instalacija framework cli alata
+
+```shell
+cargo install dioxus-cli
+```
+
+Adrese servera, potrebne pri kompilaciji, trebaju se izvesti u okruženje (env)
+
 ```shell
 # bash
 export BACKEND_URL="http://localhost:3030"
@@ -32,10 +45,14 @@ set -x BACKEND_URL "http://localhost:3030"
 set -x BACKEND_URL_WS "ws://localhost:3030"
 ```
 
-Run the following command in the root of the project to start the Dioxus dev server:
+Pokreni server (po defaultu na portu 8080)
 
 ```shell
-dx serve --hot-reload
+dx serve --release
 ```
 
-- Open the browser to http://localhost:8080
+Ili ga build-aj pa pokreni s [Nginx-om](https://nginx.org/) ili nekim drugim alatom
+
+```shell
+dx build --release
+```
